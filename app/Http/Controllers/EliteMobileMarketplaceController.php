@@ -1,0 +1,335 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Category;
+use App\Models\InstallmentPlan;
+use App\Models\Product;
+use App\Models\ProductOption;
+use App\Models\ProductVariant;
+use App\Services\CategoryMenuService;
+use App\Services\InstallmentPlanService;
+use App\Services\PendingPurchaseService;
+use App\Services\ProductImageResolver;
+use Carbon\CarbonImmutable;
+use DomainException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class EliteMobileMarketplaceController extends Controller
+{
+    public function __construct(
+        protected CategoryMenuService $categoryMenuService,
+        protected InstallmentPlanService $installmentPlanService,
+        protected PendingPurchaseService $pendingPurchases,
+        protected ProductImageResolver $productImageResolver,
+    ) {}
+
+    public function home(): View
+    {
+        return view('elite-mobile-marketplace.home', $this->storefrontData(
+            Product::query()->publiclyAvailable()->with($this->productRelations())->latest('published_at')->limit(8)->get()
+        ));
+    }
+
+    public function catalog(Request $request): View
+    {
+        return $this->catalogResponse($request);
+    }
+
+    public function category(Request $request, Category $category): View
+    {
+        abort_unless($this->menuContains($this->categoryMenuService->visibleRootCategories(), $category->id), 404);
+
+        return $this->catalogResponse($request, $category);
+    }
+
+    public function search(Request $request): View
+    {
+        return $this->catalogResponse($request);
+    }
+
+    public function showProduct(Product $product): View
+    {
+        abort_unless(Product::query()->whereKey($product->id)->publiclyAvailable()->exists(), 404);
+
+        $product->load([
+            'category', 'images', 'variants.images', 'variants.optionValues.productOption', 'installmentPlans',
+        ]);
+
+        $relatedProducts = Product::query()
+            ->publiclyAvailable()
+            ->where('category_id', $product->category_id)
+            ->whereKeyNot($product->id)
+            ->with($this->productRelations())
+            ->latest('published_at')
+            ->limit(4)
+            ->get();
+
+        $initialVariant = $product->variants
+            ->filter(fn (ProductVariant $variant) => $variant->is_available)
+            ->sortBy('price')
+            ->first()
+            ?? $product->variants->filter(fn (ProductVariant $variant) => $variant->is_active)->sortBy('price')->first();
+
+        return view('elite-mobile-marketplace.product-details', [
+            'activeTab' => 'shop', 'productModel' => $product, 'isPreview' => false, 'relatedProducts' => $relatedProducts,
+            'initialVariantPayload' => $initialVariant ? $this->variantPayload($product, $initialVariant) : null,
+            'menuCategories' => $this->categoryMenuService->visibleRootCategories(),
+        ]);
+    }
+
+    public function previewPurchase(Request $request, Product $product): JsonResponse
+    {
+        try {
+            return response()->json($this->purchasePreview($request, $product));
+        } catch (DomainException $exception) {
+            return response()->json(['message' => $exception->getMessage(), 'changed' => true], 422);
+        }
+    }
+
+    public function confirmPurchase(Request $request, Product $product): JsonResponse
+    {
+        try {
+            // Re-run the exact server lookup immediately before confirmation.
+            $preview = $this->purchasePreview($request, $product);
+
+            $token = $this->pendingPurchases->create($product, $preview, $request->input('return_url'));
+            $request->session()->put(PendingPurchaseService::SESSION_KEY, $token);
+
+            if (! $request->user()) {
+                return response()->json([
+                    'confirmed' => true, 'requires_auth' => true,
+                    'message' => 'Sign in or create an account to continue securely to checkout.',
+                    'auth_url' => route('customer.login'), 'preview' => $preview,
+                ]);
+            }
+
+            return response()->json(['confirmed' => true, 'message' => 'Your installment selection is still available.', 'checkout_url' => route('checkout.show'), 'preview' => $preview]);
+        } catch (DomainException $exception) {
+            return response()->json(['confirmed' => false, 'message' => $exception->getMessage(), 'changed' => true], 422);
+        }
+    }
+
+    /** Resolve by persisted option-value IDs; display labels are never part of this contract. */
+    public function resolveVariant(Request $request, Product $product): JsonResponse
+    {
+        abort_unless(Product::query()->whereKey($product->id)->publiclyAvailable()->exists(), 404);
+
+        $data = $request->validate([
+            // A product may legitimately have a single, optionless variant.
+            'option_value_ids' => ['present', 'array'],
+            'option_value_ids.*' => ['required', 'integer', 'distinct'],
+        ]);
+        $optionValueIds = collect($data['option_value_ids'])->map(fn ($id) => (int) $id)->sort()->values()->all();
+
+        $variant = $product->variants()
+            ->active()
+            ->with(['images', 'optionValues.productOption', 'installmentPlans' => fn ($plans) => $plans->active()])
+            ->where('option_signature', ProductVariant::buildOptionSignature($optionValueIds))
+            ->first();
+
+        if (! $variant) {
+            return response()->json(['resolved' => false, 'message' => 'This option combination is unavailable.']);
+        }
+
+        $product->loadMissing(['images', 'installmentPlans' => fn ($plans) => $plans->active()]);
+
+        return response()->json(array_merge(['resolved' => true], $this->variantPayload($product, $variant)));
+    }
+
+    protected function variantPayload(Product $product, \App\Models\ProductVariant $variant): array
+    {
+        $plans = $this->installmentPlanService->availablePlansForVariant($product, $variant);
+
+        $images = $this->productImageResolver->resolve($product, $variant);
+
+        return [
+            'variant_id' => $variant->id,
+            'sku' => $variant->sku,
+            'price' => (float) $variant->price,
+            'compare_at_price' => $variant->compare_at_price === null ? null : (float) $variant->compare_at_price,
+            'stock_quantity' => $variant->stock_quantity,
+            'in_stock' => $variant->is_available,
+            'stock_message' => $variant->is_available ? ($variant->stock_quantity <= 5 ? "Only {$variant->stock_quantity} left in stock." : 'In stock.') : 'Out of stock.',
+            'images' => $images->map(fn ($image) => [
+                'url' => asset('storage/'.$image->image_path),
+                'alt' => $image->alt_text ?: trim($product->name.' '.$variant->optionValues->pluck('display_name')->filter()->join(' ')),
+            ])->values(),
+            'plans' => $plans->map(function ($plan) use ($variant) {
+                $calculated = $this->installmentPlanService->previewFromPayload($plan->toArray(), (float) $variant->price);
+
+                return [
+                    'id' => $plan->id, 'payments' => $plan->number_of_payments, 'interval' => $plan->interval_type,
+                    'amount_due_now' => $calculated['amount_due_now'], 'future_payment_count' => $calculated['future_payment_count'],
+                    'installment_amount' => $calculated['installment_amount'], 'final_installment_amount' => $calculated['final_installment_amount'],
+                    'financing_fee' => $calculated['financing_fee'], 'total' => $calculated['total_amount'], 'schedule' => $calculated['future_installments'],
+                ];
+            })->values(),
+        ];
+    }
+
+    protected function purchasePreview(Request $request, Product $product): array
+    {
+        $data = $request->validate(['variant_id' => ['required', 'integer'], 'plan_id' => ['required', 'integer']]);
+        $product = Product::query()->publiclyAvailable()->with(['variants.optionValues.productOption', 'installmentPlans'])->find($product->id)
+            ?? throw new DomainException('This product is no longer available.');
+        $variant = $product->variants->firstWhere('id', (int) $data['variant_id']);
+        if (! $variant || ! $variant->is_active) throw new DomainException('The selected variant is no longer available.');
+        if (! $variant->is_available) throw new DomainException('Stock changed: this variant is now out of stock.');
+        $plan = $this->installmentPlanService->availablePlansForVariant($product, $variant)->firstWhere('id', (int) $data['plan_id']);
+        if (! $plan) throw new DomainException('Plan availability changed. Please select an available installment plan.');
+
+        $calculated = $this->installmentPlanService->previewFromPayload($plan->toArray(), (float) $variant->price, CarbonImmutable::now());
+        $options = $variant->optionValues->mapWithKeys(fn ($value) => [$value->productOption?->slug => $value->display_name ?: $value->name]);
+
+        return ['product' => $product->name, 'variant_id' => $variant->id, 'option_value_ids' => $variant->optionValues->pluck('id')->sort()->values()->all(), 'variant_price' => $calculated['price'], 'storage' => $options->get('storage'), 'color' => $options->get('color'), 'plan_id' => $plan->id] + $calculated;
+    }
+
+    // Legacy public URLs now use the database-backed catalog instead of demo fixtures.
+    public function productDetails()
+    {
+        return redirect()->route('catalog.index');
+    }
+
+    public function installmentService()
+    {
+        return redirect()->route('catalog.index');
+    }
+
+    public function mobilesAccessories()
+    {
+        return redirect()->route('catalog.index');
+    }
+
+    protected function storefrontData($products, ?Category $category = null, string $searchTerm = ''): array
+    {
+        return [
+            'activeTab' => 'shop',
+            'menuCategories' => $this->categoryMenuService->visibleRootCategories(),
+            'products' => $products,
+            'currentCategory' => $category,
+            'searchTerm' => $searchTerm,
+        ];
+    }
+
+    protected function catalogResponse(Request $request, ?Category $category = null): View
+    {
+        $query = Product::query()->publiclyAvailable();
+        $categoryIds = $category ? array_merge([$category->id], $category->descendantIds()) : [];
+
+        if ($categoryIds !== []) {
+            $query->whereIn('category_id', $categoryIds);
+        }
+
+        if ($requestedCategory = $request->input('category')) {
+            $filterCategory = Category::query()->where('slug', $requestedCategory)->where('is_active', true)->first();
+            if ($filterCategory) {
+                $query->whereIn('category_id', array_merge([$filterCategory->id], $filterCategory->descendantIds()));
+            }
+        }
+
+        $term = trim((string) $request->input('q', ''));
+        if ($term !== '') {
+            $query->where(fn ($products) => $products->where('name', 'like', "%{$term}%")->orWhere('brand', 'like', "%{$term}%"));
+        }
+
+        foreach (['brand', 'storage', 'color'] as $filter) {
+            $value = trim((string) $request->input($filter, ''));
+            if ($value === '') {
+                continue;
+            }
+
+            if ($filter === 'brand') {
+                $query->where('brand', $value);
+                continue;
+            }
+
+            $query->whereHas('variants', fn ($variants) => $variants->available()->whereHas('optionValues', fn ($values) => $values->active()
+                ->where('name', $value)
+                ->whereHas('productOption', fn ($option) => $option->where('slug', $filter)->where('is_active', true))));
+        }
+
+        foreach (['price_min' => '>=', 'price_max' => '<='] as $input => $operator) {
+            if (is_numeric($request->input($input))) {
+                $query->whereHas('variants', fn ($variants) => $variants->available()->where('price', $operator, (float) $request->input($input)));
+            }
+        }
+
+        if ($request->input('availability') === 'in_stock') {
+            $query->whereHas('variants', fn ($variants) => $variants->available());
+        }
+
+        if (is_numeric($request->input('payments'))) {
+            $count = (int) $request->input('payments');
+            $query->whereHas('installmentPlans', fn ($plans) => $plans->active()->where('number_of_payments', $count)
+                ->where(fn ($plans) => $plans->whereNull('product_variant_id')->orWhereHas('variant', fn ($variants) => $variants->available())));
+        }
+
+        $sort = $request->input('sort', 'newest');
+        match ($sort) {
+            'price_asc' => $query->orderByRaw('(select min(price) from product_variants where product_variants.product_id = products.id and is_active = 1 and stock_quantity > 0) asc'),
+            'price_desc' => $query->orderByRaw('(select max(price) from product_variants where product_variants.product_id = products.id and is_active = 1 and stock_quantity > 0) desc'),
+            'installment_asc' => $query->orderByRaw('(select min(installment_amount) from installment_plans where installment_plans.product_id = products.id and is_active = 1) asc'),
+            'name_asc' => $query->orderBy('name'),
+            default => $query->latest('published_at'),
+        };
+
+        $products = $query->with($this->productRelations())->paginate(18)->withQueryString();
+
+        return view('elite-mobile-marketplace.catalog', array_merge(
+            $this->storefrontData($products, $category, $term),
+            ['filterOptions' => $this->filterOptions(), 'childCategories' => $category ? $this->visibleChildren($category) : collect(), 'selectedSort' => $sort]
+        ));
+    }
+
+    protected function filterOptions(): array
+    {
+        $available = Product::query()->publiclyAvailable();
+
+        return [
+            'categories' => Category::query()->where('is_active', true)->ordered()->get(['id', 'name', 'slug']),
+            'brands' => (clone $available)->whereNotNull('brand')->where('brand', '!=', '')->distinct()->orderBy('brand')->pluck('brand'),
+            'storage' => $this->availableOptionNames(ProductOption::STORAGE_SLUG),
+            'color' => $this->availableOptionNames(ProductOption::COLOR_SLUG),
+            'payments' => InstallmentPlan::query()->active()
+                ->whereHas('product', fn ($products) => $products->publiclyAvailable())
+                ->where(fn ($plans) => $plans->whereNull('product_variant_id')->orWhereHas('variant', fn ($variants) => $variants->available()))
+                ->distinct()->orderBy('number_of_payments')->pluck('number_of_payments'),
+        ];
+    }
+
+    protected function availableOptionNames(string $optionSlug)
+    {
+        return \App\Models\ProductOptionValue::query()->active()
+            ->whereHas('productOption', fn ($options) => $options->where('slug', $optionSlug)->where('is_active', true))
+            ->whereHas('variants', fn ($variants) => $variants->available()->whereHas('product', fn ($products) => $products->publiclyAvailable()))
+            ->orderBy('name')->pluck('name')->unique()->values();
+    }
+
+    protected function visibleChildren(Category $category)
+    {
+        return $category->children()->where('is_active', true)->whereHas('products', fn ($products) => $products->publiclyAvailable())->get();
+    }
+
+    protected function productRelations(): array
+    {
+        return [
+            'category:id,name,slug', 'images',
+            'variants' => fn ($query) => $query->available()->with(['optionValues' => fn ($values) => $values->active()->whereHas('productOption', fn ($options) => $options->where('is_active', true))->with('productOption')])->orderBy('price'),
+            'installmentPlans' => fn ($query) => $query->active(),
+        ];
+    }
+
+    protected function menuContains(iterable $categories, int $categoryId): bool
+    {
+        foreach ($categories as $menuCategory) {
+            if ($menuCategory->id === $categoryId || $this->menuContains($menuCategory->childrenRecursive, $categoryId)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}

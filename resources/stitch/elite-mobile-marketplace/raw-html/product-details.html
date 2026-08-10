@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PhoneMart | Flagship Series</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-fixed": "#94f2f0",
+                      "surface-container-high": "#e5e9eb",
+                      "on-secondary": "#ffffff",
+                      "error": "#ba1a1a",
+                      "on-primary-fixed-variant": "#2d476f",
+                      "background": "#f7fafc",
+                      "outline": "#74777f",
+                      "outline-variant": "#c4c6cf",
+                      "secondary-fixed": "#d3e4ff",
+                      "on-tertiary-fixed": "#00201f",
+                      "inverse-primary": "#adc7f7",
+                      "on-surface-variant": "#43474e",
+                      "on-primary-container": "#86a0cd",
+                      "on-surface": "#181c1e",
+                      "on-error-container": "#93000a",
+                      "surface-container-highest": "#e0e3e5",
+                      "tertiary-fixed-dim": "#77d6d3",
+                      "surface-dim": "#d7dadc",
+                      "secondary-container": "#7db6ff",
+                      "surface-tint": "#455f88",
+                      "secondary": "#1960a3",
+                      "on-tertiary-container": "#4cadab",
+                      "surface-container-low": "#f1f4f6",
+                      "primary-fixed": "#d6e3ff",
+                      "on-primary-fixed": "#001b3c",
+                      "surface-variant": "#e0e3e5",
+                      "on-tertiary-fixed-variant": "#00504e",
+                      "on-primary": "#ffffff",
+                      "primary-container": "#1a365d",
+                      "on-secondary-container": "#00477f",
+                      "surface-container-lowest": "#ffffff",
+                      "on-background": "#181c1e",
+                      "surface": "#f7fafc",
+                      "tertiary": "#002625",
+                      "tertiary-container": "#003d3c",
+                      "on-secondary-fixed": "#001c38",
+                      "on-secondary-fixed-variant": "#004881",
+                      "on-error": "#ffffff",
+                      "inverse-on-surface": "#eef1f3",
+                      "surface-bright": "#f7fafc",
+                      "primary-fixed-dim": "#adc7f7",
+                      "inverse-surface": "#2d3133",
+                      "surface-container": "#ebeef0",
+                      "error-container": "#ffdad6",
+                      "on-tertiary": "#ffffff",
+                      "secondary-fixed-dim": "#a2c9ff",
+                      "primary": "#002045"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xs": "4px",
+                      "container-margin": "16px",
+                      "lg": "24px",
+                      "md": "16px",
+                      "sm": "8px",
+                      "xl": "32px",
+                      "gutter": "12px",
+                      "base": "4px"
+              },
+              "fontFamily": {
+                      "headline-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "price-display": ["Inter"],
+                      "headline-sm": ["Inter"],
+                      "label-md": ["Inter"],
+                      "display-lg-mobile": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "body-md": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "price-display": ["20px", {"lineHeight": "24px", "fontWeight": "700"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                      "display-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                      "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md text-body-md overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin py-md bg-surface-container-lowest dark:bg-surface-dim shadow-sm">
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-primary dark:text-primary-fixed-dim transition-transform active:scale-95" data-icon="menu">menu</button>
+<span class="font-headline-md-mobile text-headline-md-mobile font-bold text-primary dark:text-primary-fixed-dim">PhoneMart</span>
+</div>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-primary dark:text-primary-fixed-dim transition-transform active:scale-95" data-icon="shopping_cart">shopping_cart</button>
+</div>
+</header>
+<main class="pt-20 pb-32">
+<!-- Hero Gallery Section -->
+<section class="px-container-margin mb-xl">
+<div class="relative group">
+<div class="w-full aspect-square rounded-xl overflow-hidden bg-surface-container shadow-[0px_4px_20px_rgba(26,54,93,0.08)] transition-all" id="main-gallery">
+<img class="w-full h-full object-contain p-lg" data-alt="A professional studio product photograph of a sleek flagship smartphone in titanium gray, positioned diagonally against a soft-focus minimalist background. The lighting is sophisticated and multi-directional, highlighting the polished metal edges and the deep black glass of the triple-lens camera module. The aesthetic is ultra-premium, modern, and clean, using a palette of metallic silvers and deep grays to evoke high-end technology and precision engineering." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDv9gT4v_qPxBucDEydTDzHb6896DaeIZcQT8lLQzggkk3ykTfDgirvwBc6AXFcan6Zw6T9_Hep5NQvGhqXIqIMhXxDZXeKK8zx90vhMBGq87xYZ02L7HpC50RzrK8-iIuutKpUDugjV2ME1p0k11EupRdbOoHZ8PDTmckyxEce0guZwsytmxwf0oPnaKAb3hjX6cKgBHV9aSfR2AFs491YEVrmo0h-3YtwDRYu6ug6s099AqR3wqHW-Q"/>
+</div>
+<!-- Gallery Thumbnails -->
+<div class="flex gap-sm mt-md overflow-x-auto hide-scrollbar pb-xs">
+<div class="w-20 h-20 flex-shrink-0 border-2 border-primary rounded-lg overflow-hidden bg-white cursor-pointer">
+<img class="w-full h-full object-cover" data-alt="Close-up detail shot of a flagship smartphone's camera array, showing three large glass lenses with purple and blue optical coatings. The surrounding frame is brushed aerospace-grade titanium with a subtle matte texture. The lighting is bright and clear, emphasizing the intricate mechanical detail and premium build quality of the device." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUkp3wGJ0IXP23W8ODe5mHPAxMQqa5AUQUKSmRtaXEcjpICsyhKAz1dEnn914gBN0p6UKj3ubsdeJef1NI9t2pbhD3keZMpc0lFmnRp4x7vhddzXSXrej8kAR76IoGLHOjJlqQUVzWtjBi4jNntYDQQVCBUVsVyOzkrsjh7BQeWqXTLZ6xWKhTTgUQjaJXy4seya5ONOzOWwpX_Qu-9wgvgCPK5SiW1p_UuzGQ_1wwotESgywr7y6o0Q"/>
+</div>
+<div class="w-20 h-20 flex-shrink-0 border border-outline-variant rounded-lg overflow-hidden bg-white cursor-pointer hover:border-secondary transition-colors">
+<img class="w-full h-full object-cover" data-alt="Front view of a modern flagship smartphone with an edge-to-edge OLED display showing a vibrant abstract wallpaper of flowing liquid teals and navies. The bezels are incredibly thin, and a small punch-hole camera is visible at the top. The image is crisp and high-resolution, highlighting the intense color accuracy and brightness of the screen." src="https://lh3.googleusercontent.com/aida-public/AB6AXuADYRaCQeQ5bF1tim00XBU7IVCsm5Goy4H63sNTs5BuooFYfDxT_mge23f0QiYTPxyKXjU6iDCPxzMWzhRmPWefC9_jkSHFpCPpYe0qVUOQbxfEmQIjXetthZ9wzEF6Dzm-aUNzYbreROc760PimwV0Bcy62BFbxApJd_Z4L4mtfd5Zp2Pg2ecztKL6XrTzQKxMvnZ3A4F6yC-3M3swhenVZp-7kyM1oSZW1g-5zp5BRaKEbOntpRFUxQ"/>
+</div>
+<div class="w-20 h-20 flex-shrink-0 border border-outline-variant rounded-lg overflow-hidden bg-white cursor-pointer hover:border-secondary transition-colors">
+<img class="w-full h-full object-cover" data-alt="Lifestyle shot of a hand holding a slim flagship smartphone against a backdrop of a blurred modern architectural interior with natural light. The phone's reflective surface catches highlights of the environment, demonstrating its ergonomic design and premium hand-feel. The color palette remains consistent with cool blues and professional grays." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBCuJxTxho5pfkqzmMdtdjDmkbz5eq_-UsnoCgGG1PaoN_orZKk1c4HZBJaYHzCc8vj42AmOG2ycwtC60vjXZXpOBxLgHHKNSXZZj8g_KA7Cgy8A4V1EdghyQ0D08GxWR-8zL6K1XcZvWCZzUT6UAMNgQu7p8LfwkjNhJVEyYg1JBFFYWdMkhgZfltjAT9Kj2n0sJd8Qs3FPSg1w9u_YBE-IO1_F_hH8FQRC7WoJ2c_E46Zavj6Ztqe0g"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Product Info Header -->
+<section class="px-container-margin mb-lg">
+<div class="flex justify-between items-start mb-xs">
+<h1 class="font-display-lg-mobile text-display-lg-mobile text-primary tracking-tight">Nexus G9 Ultra 5G</h1>
+<button class="material-symbols-outlined text-outline p-xs hover:bg-surface-container rounded-full" data-icon="favorite">favorite</button>
+</div>
+<div class="flex items-center gap-xs mb-md">
+<div class="flex text-[#FFB800]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0.5;">star_half</span>
+</div>
+<span class="text-on-surface-variant font-label-md">(1,248 reviews)</span>
+</div>
+<div class="flex flex-col gap-xs">
+<span class="font-display-lg text-display-lg text-primary">$1,199.00</span>
+<span class="text-secondary font-body-lg">Starting from $49.95/mo</span>
+</div>
+</section>
+<!-- Installment Calculator Widget -->
+<section class="px-container-margin mb-xl">
+<div class="bg-primary-container text-on-primary-container p-md rounded-xl shadow-sm border border-primary/10">
+<div class="flex items-center gap-sm mb-md">
+<span class="material-symbols-outlined text-tertiary-fixed" data-icon="payments">payments</span>
+<h3 class="font-headline-sm-mobile text-headline-sm-mobile text-white">Installment Calculator</h3>
+</div>
+<p class="text-on-primary-container/80 mb-lg">Choose a plan that fits your budget. 0% interest for the first 6 months.</p>
+<div class="grid grid-cols-3 gap-sm mb-lg">
+<button class="flex flex-col items-center p-sm rounded-lg bg-surface-container-lowest text-primary ring-2 ring-secondary-container transition-all">
+<span class="font-bold">6 mo.</span>
+<span class="text-xs">$199.83</span>
+</button>
+<button class="flex flex-col items-center p-sm rounded-lg bg-white/10 text-white/70 border border-white/20 transition-all hover:bg-white/5">
+<span class="font-bold">12 mo.</span>
+<span class="text-xs">$99.91</span>
+</button>
+<button class="flex flex-col items-center p-sm rounded-lg bg-white/10 text-white/70 border border-white/20 transition-all hover:bg-white/5">
+<span class="font-bold">24 mo.</span>
+<span class="text-xs">$49.95</span>
+</button>
+</div>
+<button class="w-full py-md bg-secondary text-on-secondary font-bold rounded-lg flex items-center justify-center gap-sm active:scale-95 transition-transform">
+                    Check Eligibility
+                    <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</section>
+<!-- Specifications (Bento-lite) -->
+<section class="px-container-margin mb-xl">
+<h2 class="font-headline-sm text-headline-sm text-primary mb-md">Tech Specs</h2>
+<div class="grid grid-cols-2 gap-sm">
+<div class="col-span-2 bg-white p-md rounded-xl border border-outline-variant flex items-center gap-md">
+<div class="p-sm bg-surface-container rounded-lg">
+<span class="material-symbols-outlined text-secondary" data-icon="smartphone">smartphone</span>
+</div>
+<div>
+<p class="text-on-surface-variant font-label-md">Display</p>
+<p class="font-bold">6.8" Dynamic AMOLED 2X, 120Hz</p>
+</div>
+</div>
+<div class="bg-white p-md rounded-xl border border-outline-variant flex flex-col gap-sm">
+<span class="material-symbols-outlined text-secondary" data-icon="photo_camera">photo_camera</span>
+<div>
+<p class="text-on-surface-variant font-label-md">Camera</p>
+<p class="font-bold">200MP Main</p>
+</div>
+</div>
+<div class="bg-white p-md rounded-xl border border-outline-variant flex flex-col gap-sm">
+<span class="material-symbols-outlined text-secondary" data-icon="battery_charging_full">battery_charging_full</span>
+<div>
+<p class="text-on-surface-variant font-label-md">Battery</p>
+<p class="font-bold">5,000mAh</p>
+</div>
+</div>
+<div class="col-span-2 bg-white p-md rounded-xl border border-outline-variant flex items-center gap-md">
+<div class="p-sm bg-surface-container rounded-lg">
+<span class="material-symbols-outlined text-secondary" data-icon="memory">memory</span>
+</div>
+<div>
+<p class="text-on-surface-variant font-label-md">Processor</p>
+<p class="font-bold">Octa-core 4nm Architecture</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Reviews Summary -->
+<section class="px-container-margin mb-xl">
+<div class="flex justify-between items-center mb-md">
+<h2 class="font-headline-sm text-headline-sm text-primary">Reviews</h2>
+<button class="text-secondary font-bold text-label-md">See All</button>
+</div>
+<div class="flex gap-md overflow-x-auto hide-scrollbar py-xs">
+<div class="min-w-[280px] bg-white p-md rounded-xl border border-outline-variant shadow-sm">
+<div class="flex items-center gap-sm mb-sm">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-bold text-xs">JD</div>
+<span class="font-bold">James D.</span>
+<span class="text-xs text-on-surface-variant ml-auto">2d ago</span>
+</div>
+<div class="flex text-[#FFB800] text-sm mb-sm">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<p class="text-on-surface-variant line-clamp-3">The camera on this thing is absolutely insane. Night mode photography is like nothing I've seen before on a phone.</p>
+</div>
+<div class="min-w-[280px] bg-white p-md rounded-xl border border-outline-variant shadow-sm">
+<div class="flex items-center gap-sm mb-sm">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed font-bold text-xs">SK</div>
+<span class="font-bold">Sarah K.</span>
+<span class="text-xs text-on-surface-variant ml-auto">1w ago</span>
+</div>
+<div class="flex text-[#FFB800] text-sm mb-sm">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 0;">star</span>
+</div>
+<p class="text-on-surface-variant line-clamp-3">Battery life easily lasts two days even with heavy usage. Only downside is the size, it's quite a large device.</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Fixed Action Footer -->
+<div class="fixed bottom-0 left-0 w-full bg-surface-container-lowest p-md flex gap-md shadow-[0px_-4px_20px_rgba(26,54,93,0.08)] z-40 border-t border-outline-variant">
+<button class="flex-1 py-lg border-2 border-primary text-primary font-bold rounded-xl active:scale-95 transition-all">
+            Add to Cart
+        </button>
+<button class="flex-1 py-lg bg-primary text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all">
+            Buy Now
+        </button>
+</div>
+<!-- Bottom Navigation Shell (Always visible on mobile) -->
+<!-- Note: Following the rule to suppress if it is a detail/focused journey, 
+         but the prompt asks for a detail page within the app flow. 
+         I will keep it for navigation consistency as it is part of the 'Shop' destination. -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-xs pb-safe pt-sm bg-surface-container-lowest dark:bg-surface-dim border-t border-outline-variant md:hidden">
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 transition-all duration-200 active:scale-90">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 transition-all duration-200 active:scale-90">
+<span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+<span class="font-label-md text-label-md">Shop</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 transition-all duration-200 active:scale-90">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-label-md text-label-md">Installments</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 transition-all duration-200 active:scale-90">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</div>
+</nav>
+<!-- Adjust content padding for bottom nav -->
+<div class="h-20 md:hidden"></div>
+<script>
+        // Simple Interaction: Image Gallery Switcher
+        const thumbs = document.querySelectorAll('.cursor-pointer');
+        const mainImg = document.querySelector('#main-gallery img');
+
+        thumbs.forEach(thumb => {
+            thumb.addEventListener('click', () => {
+                // Update active state
+                thumbs.forEach(t => t.classList.remove('border-primary'));
+                thumbs.forEach(t => t.classList.add('border-outline-variant'));
+                thumb.classList.add('border-primary');
+                thumb.classList.remove('border-outline-variant');
+
+                // Swap images (simulation)
+                const newSrc = thumb.querySelector('img').src;
+                const newAlt = thumb.querySelector('img').getAttribute('data-alt');
+                
+                mainImg.style.opacity = '0';
+                setTimeout(() => {
+                    mainImg.src = newSrc;
+                    mainImg.setAttribute('data-alt', newAlt);
+                    mainImg.style.opacity = '1';
+                }, 200);
+            });
+        });
+
+        // Micro-interaction for primary button
+        const buyBtn = document.querySelector('button.bg-primary');
+        buyBtn.addEventListener('click', function() {
+            this.innerText = "Processing...";
+            setTimeout(() => {
+                this.innerText = "Order Placed!";
+                this.classList.replace('bg-primary', 'bg-tertiary-container');
+                this.classList.add('text-on-tertiary-container');
+            }, 1000);
+        });
+    </script>
+</body></html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PhoneMart - Modern Smartphone Store</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed": "#94f2f0",
+                    "surface-container-high": "#e5e9eb",
+                    "on-secondary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed-variant": "#2d476f",
+                    "background": "#f7fafc",
+                    "outline": "#74777f",
+                    "outline-variant": "#c4c6cf",
+                    "secondary-fixed": "#d3e4ff",
+                    "on-tertiary-fixed": "#00201f",
+                    "inverse-primary": "#adc7f7",
+                    "on-surface-variant": "#43474e",
+                    "on-primary-container": "#86a0cd",
+                    "on-surface": "#181c1e",
+                    "on-error-container": "#93000a",
+                    "surface-container-highest": "#e0e3e5",
+                    "tertiary-fixed-dim": "#77d6d3",
+                    "surface-dim": "#d7dadc",
+                    "secondary-container": "#7db6ff",
+                    "surface-tint": "#455f88",
+                    "secondary": "#1960a3",
+                    "on-tertiary-container": "#4cadab",
+                    "surface-container-low": "#f1f4f6",
+                    "primary-fixed": "#d6e3ff",
+                    "on-primary-fixed": "#001b3c",
+                    "surface-variant": "#e0e3e5",
+                    "on-tertiary-fixed-variant": "#00504e",
+                    "on-primary": "#ffffff",
+                    "primary-container": "#1a365d",
+                    "on-secondary-container": "#00477f",
+                    "surface-container-lowest": "#ffffff",
+                    "on-background": "#181c1e",
+                    "surface": "#f7fafc",
+                    "tertiary": "#002625",
+                    "tertiary-container": "#003d3c",
+                    "on-secondary-fixed": "#001c38",
+                    "on-secondary-fixed-variant": "#004881",
+                    "on-error": "#ffffff",
+                    "inverse-on-surface": "#eef1f3",
+                    "surface-bright": "#f7fafc",
+                    "primary-fixed-dim": "#adc7f7",
+                    "inverse-surface": "#2d3133",
+                    "surface-container": "#ebeef0",
+                    "error-container": "#ffdad6",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed-dim": "#a2c9ff",
+                    "primary": "#002045"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "4px",
+                    "container-margin": "16px",
+                    "lg": "24px",
+                    "md": "16px",
+                    "sm": "8px",
+                    "xl": "32px",
+                    "gutter": "12px",
+                    "base": "4px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "price-display": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "label-md": ["Inter"],
+                    "display-lg-mobile": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "price-display": ["20px", {"lineHeight": "24px", "fontWeight": "700"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "display-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background antialiased pb-24">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin py-md bg-surface-container-lowest dark:bg-surface-dim shadow-[0px_4px_20px_rgba(26,54,93,0.08)] shadow-sm">
+<div class="flex items-center gap-md">
+<button class="transition-transform active:scale-95 text-primary dark:text-primary-fixed-dim">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-md-mobile text-headline-md-mobile font-bold text-primary dark:text-primary-fixed-dim">PhoneMart</h1>
+</div>
+<div class="flex items-center gap-md">
+<button class="transition-transform active:scale-95 text-primary dark:text-primary-fixed-dim">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="transition-transform active:scale-95 text-primary dark:text-primary-fixed-dim">
+<span class="material-symbols-outlined">shopping_cart</span>
+</button>
+</div>
+</header>
+<main class="mt-20 px-container-margin space-y-xl">
+<!-- Hero Banner -->
+<section class="relative rounded-xl overflow-hidden bg-primary-container h-[420px] flex items-center shadow-lg group">
+<div class="absolute inset-0 z-0 opacity-40">
+
+</div>
+<div class="relative z-10 p-lg max-w-[60%] flex flex-col gap-md">
+<span class="text-tertiary-fixed font-label-md text-label-md tracking-widest">LATEST ARRIVAL</span>
+<h2 class="font-display-lg-mobile text-display-lg-mobile text-on-primary">Titanium Ultra Max</h2>
+<p class="text-on-primary-container font-body-md text-body-md">The next generation of intelligence and power. Built for the future.</p>
+<div class="flex flex-col gap-sm mt-md">
+<button class="bg-secondary text-on-secondary px-xl py-md rounded-lg font-headline-sm text-headline-sm transition-all hover:bg-opacity-90 active:scale-95">Shop Now</button>
+<button class="bg-primary border border-outline-variant text-on-primary px-xl py-md rounded-lg font-label-md text-label-md flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">payments</span>
+                        Check Installment Plans
+                    </button>
+</div>
+</div>
+<div class="absolute right-[-10%] top-1/2 -translate-y-1/2 w-[55%] h-full rotate-[-10deg] transition-transform duration-700 group-hover:rotate-0 group-hover:scale-105">
+<img class="w-full h-full object-contain drop-shadow-2xl" data-alt="A hyper-realistic, high-end flagship smartphone with a titanium frame and a massive triple-lens camera system, floating against a clean dark background with atmospheric teal lighting. The phone screen displays a vibrant, colorful abstract wallpaper that glows slightly. The overall aesthetic is ultra-modern, premium, and sleek, echoing the luxury tech brand of PhoneMart." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAZok8b27bejIUuEhovFvH6j8u72RY-D-rpUp4y_2J7Zi4V834jj_7-gPZ9YNfSzBivGC5sxzdSaBAh_vtN-zcuzxX_psA5b5Vaty4haAPrjLVF8SUe11Upv1D1U4SdXQqPvgxf8m9WPJKuPrLx1mLKEs4wBJwxzZDeecKIuDi8h5kVeVRo9kMkK6QwJ2rIxJhWkWAlqV6kClrf5A-2rvjB_wESKvU4l7f4ZkhbdabAO6ODD6KP618Kg"/>
+</div>
+</section>
+<!-- Categories -->
+<section class="py-sm">
+<div class="flex items-center justify-between mb-md">
+<h3 class="font-headline-sm text-headline-sm">Categories</h3>
+<button class="text-secondary font-label-md text-label-md">View All</button>
+</div>
+<div class="flex gap-md overflow-x-auto no-scrollbar pb-xs">
+<div class="flex flex-col items-center gap-xs min-w-[80px]">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-primary transition-all hover:bg-secondary-container hover:text-on-secondary-container cursor-pointer">
+<span class="material-symbols-outlined text-3xl">smartphone</span>
+</div>
+<span class="font-label-md text-label-md">Mobiles</span>
+</div>
+<div class="flex flex-col items-center gap-xs min-w-[80px]">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-primary transition-all hover:bg-secondary-container hover:text-on-secondary-container cursor-pointer">
+<span class="material-symbols-outlined text-3xl">tablet</span>
+</div>
+<span class="font-label-md text-label-md">Tablets</span>
+</div>
+<div class="flex flex-col items-center gap-xs min-w-[80px]">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-primary transition-all hover:bg-secondary-container hover:text-on-secondary-container cursor-pointer">
+<span class="material-symbols-outlined text-3xl">headphones</span>
+</div>
+<span class="font-label-md text-label-md">Audio</span>
+</div>
+<div class="flex flex-col items-center gap-xs min-w-[80px]">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-primary transition-all hover:bg-secondary-container hover:text-on-secondary-container cursor-pointer">
+<span class="material-symbols-outlined text-3xl">watch</span>
+</div>
+<span class="font-label-md text-label-md">Wearables</span>
+</div>
+<div class="flex flex-col items-center gap-xs min-w-[80px]">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-primary transition-all hover:bg-secondary-container hover:text-on-secondary-container cursor-pointer">
+<span class="material-symbols-outlined text-3xl">laptop</span>
+</div>
+<span class="font-label-md text-label-md">Laptops</span>
+</div>
+</div>
+</section>
+<!-- Installment Banner -->
+<section class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl flex items-center justify-between shadow-sm">
+<div class="flex gap-md items-center">
+<div class="bg-secondary-container p-md rounded-full text-on-secondary-container">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">payments</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm">خدمة التقسيط</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Pay monthly, no hidden fees. Quick approval.</p>
+</div>
+</div>
+<a class="text-secondary font-headline-sm text-headline-sm border-b-2 border-secondary pb-1 hover:text-primary hover:border-primary transition-all" href="#">Learn More</a>
+</section>
+<!-- Featured Deals -->
+<section class="space-y-md">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-sm text-headline-sm">Featured Deals</h3>
+<div class="flex gap-sm">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="w-2 h-2 rounded-full bg-surface-container-high"></span>
+<span class="w-2 h-2 rounded-full bg-surface-container-high"></span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-md">
+<!-- Product Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden flex flex-col group transition-transform active:scale-95 shadow-sm">
+<div class="h-40 w-full relative overflow-hidden bg-surface-container-low p-md">
+<img class="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500" data-alt="A professional studio product shot of a sleek black foldable smartphone displayed half-open on a minimalist white surface. The lighting is soft and high-key, highlighting the premium glass and metal textures. The image conveys high-end technology and sophisticated product design, adhering to the clean PhoneMart aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_1da_DSlQjikz4KqjJoU623kXOkMa1n6x9qgZejRK-qiNEbBo3tYabRLsh6q_F-9PjcIIOZZMsgXbEu_gd0lhVpiZsEmab_ctpdI7VZTzqdkB42V4Zt1sAfoIz1AH3wj31-zoIVThWO4aUSzagdZgxAMcQsVR8W3q46lCQw-ut0BvJS8nCIvOvFXsZpFdlBTW1NA7sYayk1bJxLwG4OSxO45P3OzEKl6_SER--ZtXyDKMfk9vdbhhNQ"/>
+<span class="absolute top-sm left-sm bg-error text-on-error font-label-md text-label-md px-sm py-xs rounded">-15%</span>
+</div>
+<div class="p-md flex flex-col gap-xs">
+<h4 class="font-body-lg text-body-lg text-on-surface line-clamp-1">Galaxy Z Fold Special</h4>
+<div class="flex flex-col">
+<span class="font-price-display text-price-display text-primary">4,999 EGP</span>
+<span class="text-secondary font-label-md text-label-md">From 416/mo</span>
+</div>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden flex flex-col group transition-transform active:scale-95 shadow-sm">
+<div class="h-40 w-full relative overflow-hidden bg-surface-container-low p-md">
+<img class="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500" data-alt="A premium wireless noise-canceling headphone in a sleek silver finish, presented in a minimalist, bright studio setting. The lighting creates elegant shadows, emphasizing the ergonomic and luxurious leather padding. The style is modern and high-tech, perfect for an electronics marketplace like PhoneMart." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBsdsbmOC_C9udFLM-ekWPhLYW1oB00Irp2UmKE_jfXvTSqZ9ATJzhmZLvPo0sXqum1jN7y0Yxf3KxnHOEea36BeOfWC1YBlqlz-DrqC6UdC1WaZRemdSRlL22rw96Ml8UJLHakDlJqNmwV6hZZFN2ckGKT5CpP9b3Jp3d4D0oE58HzVjsFF44CtfrYcGrOYujanxjMwWvgS0nww9Xk_Cpd5ijwMoU3vu6QPfAJ5sTQ1dBAAYrkBT_EQ"/>
+</div>
+<div class="p-md flex flex-col gap-xs">
+<h4 class="font-body-lg text-body-lg text-on-surface line-clamp-1">Pro Sound XL Headphones</h4>
+<div class="flex flex-col">
+<span class="font-price-display text-price-display text-primary">1,200 EGP</span>
+<span class="text-secondary font-label-md text-label-md">From 100/mo</span>
+</div>
+</div>
+</div>
+<!-- Product Card 3 -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden flex flex-col group transition-transform active:scale-95 shadow-sm">
+<div class="h-40 w-full relative overflow-hidden bg-surface-container-low p-md">
+<img class="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500" data-alt="A cutting-edge smartwatch with a sleek circular face and a high-resolution AMOLED display showing health metrics. The watch has a premium dark grey silicone strap and is shown from an angled perspective in a clean, brightly lit environment. The aesthetic is sporty yet luxury tech." src="https://lh3.googleusercontent.com/aida-public/AB6AXuChQtI2fI8NicAD8frjuxXws4o3GosGl2ee7_AI0kriw1_cph-sAvGjuQTotPYDNJEDXJXkdXVFgTuuD06CevOd4o6mxKxMg3t9yapWSeH0XoMvbpOB0Ve-go3QILg3bWcmv4Acx1NyP-BZg50Skcg_JNS8Rva2KHSTzkop7Jd65cN8du4sVcyjli02QEX5uSeRf1OemKj23RGJilfeu9jxqtQFV6DHT0zCEqFCWiu0D7prieiWFAtGig"/>
+</div>
+<div class="p-md flex flex-col gap-xs">
+<h4 class="font-body-lg text-body-lg text-on-surface line-clamp-1">Active Series 9 Watch</h4>
+<div class="flex flex-col">
+<span class="font-price-display text-price-display text-primary">850 EGP</span>
+<span class="text-secondary font-label-md text-label-md">From 70/mo</span>
+</div>
+</div>
+</div>
+<!-- Product Card 4 -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden flex flex-col group transition-transform active:scale-95 shadow-sm">
+<div class="h-40 w-full relative overflow-hidden bg-surface-container-low p-md">
+<img class="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500" data-alt="A sleek white tablet with an ultra-thin bezel and a high-resolution screen displaying creative digital art. A professional stylus is resting elegantly next to the tablet. The scene is bright and minimalist with soft blue accents, emphasizing clarity and high-performance hardware." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSSWCiOGeiKfhdVE9yO_JTVNjkr8PczI-9-syszoIQlz0Uq-PUNm6XkzZbv2b0nuandaAsXD8Xz2Q8Ayl_4NlWKfQGKn4IcWIrnst7ySKwknb_xonhIz427J2qP3DCzPjZN7iroWurerVGTTPdk8vaupc5feRrrYZ-G0an5IdvvMRURNJJWFkSLoq3XcxUaLvJvcYm0DYGSN6EUn4TNBsaZyYmIEcCVJLrcCxyrhqlPBHPhXoitsHFWw"/>
+</div>
+<div class="p-md flex flex-col gap-xs">
+<h4 class="font-body-lg text-body-lg text-on-surface line-clamp-1">Nano Tab Pro 11"</h4>
+<div class="flex flex-col">
+<span class="font-price-display text-price-display text-primary">2,500 EGP</span>
+<span class="text-secondary font-label-md text-label-md">From 208/mo</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Newsletter / Trust -->
+<section class="py-xl border-t border-outline-variant text-center space-y-md">
+<h3 class="font-headline-md text-headline-md text-primary">Need Help Choosing?</h3>
+<p class="font-body-md text-body-md text-on-surface-variant px-lg">Our experts are available to guide you through the best installment plans and device specifications.</p>
+<button class="border-2 border-secondary text-secondary px-xl py-md rounded-lg font-headline-sm text-headline-sm hover:bg-secondary hover:text-on-secondary transition-all">Chat with an Expert</button>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-xs pb-safe pt-sm bg-surface-container-lowest dark:bg-surface-dim shadow-[0px_-4px_20px_rgba(26,54,93,0.08)] rounded-t-xl border-t border-outline-variant dark:border-outline">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-on-secondary rounded-full px-4 py-1 transition-all duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<!-- Shop -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 transition-all duration-200 active:scale-90 hover:bg-surface-container-low dark:hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined">storefront</span>
+<span class="font-label-md text-label-md">Shop</span>
+</a>
+<!-- Installments -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 transition-all duration-200 active:scale-90 hover:bg-surface-container-low dark:hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-md text-label-md">Installments</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 transition-all duration-200 active:scale-90 hover:bg-surface-container-low dark:hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+<!-- Micro-interactions Script -->
+<script>
+        document.querySelectorAll('button, a').forEach(el => {
+            el.addEventListener('click', (e) => {
+                // Prevent default if href is #
+                if(el.getAttribute('href') === '#') e.preventDefault();
+                
+                // Add a subtle ripple or scale effect feedback
+                el.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    el.style.transform = '';
+                }, 100);
+            });
+        });
+
+        // Simple scroll reveal for cards
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('opacity-100', 'translate-y-0');
+                    entry.target.classList.remove('opacity-0', 'translate-y-4');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.grid > div').forEach(card => {
+            card.classList.add('transition-all', 'duration-700', 'opacity-0', 'translate-y-4');
+            observer.observe(card);
+        });
+    </script>
+</body></html>
