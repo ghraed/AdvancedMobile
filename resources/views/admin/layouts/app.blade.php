@@ -5,6 +5,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>@yield('title', 'Admin')</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap" rel="stylesheet">
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         <style>
             :root {
@@ -30,8 +33,9 @@
             body { margin: 0; background: radial-gradient(circle at 8% 0%, rgba(37,99,235,.12), transparent 28rem), radial-gradient(circle at 100% 18%, rgba(79,70,229,.10), transparent 30rem), var(--admin-bg); color: var(--admin-text); font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
             a { color: inherit; }
             button, input, select, textarea { font: inherit; }
-            .admin-app { min-height: 100vh; display: grid; grid-template-columns: 280px minmax(0, 1fr); }
-            .admin-sidebar { position: sticky; top: 0; height: 100vh; background: linear-gradient(165deg, #0f172a 0%, #1e3a8a 68%, #3730a3 100%); color: #f9fafb; padding: 28px 20px; border-right: 1px solid rgba(255, 255, 255, 0.08); }
+            .admin-app { min-height: 100vh; display: grid; grid-template-columns: 280px minmax(0, 1fr); transition: grid-template-columns .2s ease; }
+            .admin-app.is-sidebar-collapsed { grid-template-columns: 76px minmax(0, 1fr); }
+            .admin-sidebar { position: sticky; top: 0; height: 100vh; overflow: hidden; background: linear-gradient(165deg, #0f172a 0%, #1e3a8a 68%, #3730a3 100%); color: #f9fafb; padding: 28px 20px; border-right: 1px solid rgba(255, 255, 255, 0.08); transition: padding .2s ease; }
             .admin-sidebar__brand { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
             .admin-sidebar__eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 255, 255, 0.64); }
             .admin-sidebar__title { margin: 0; font-size: 24px; font-weight: 700; }
@@ -41,11 +45,29 @@
             .admin-sidebar__nav { display: grid; gap: 8px; }
             .admin-sidebar__nav a,
             .admin-sidebar__nav button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-radius: 14px; padding: 12px 14px; text-decoration: none; color: rgba(255, 255, 255, 0.82); background: transparent; cursor: pointer; }
+            .admin-sidebar__nav-icon, .admin-sidebar-collapse-toggle .material-symbols-outlined { font-size: 21px; line-height: 1; }
+            .admin-sidebar__nav-label { flex: 1; text-align: left; }
+            .admin-sidebar__nav-meta { color: rgba(255, 255, 255, .55); font-size: 12px; }
             .admin-sidebar__nav a:hover,
             .admin-sidebar__nav button:hover,
             .admin-sidebar__nav a.is-active { background: rgba(255, 255, 255, 0.12); color: #fff; }
             .admin-main { min-width: 0; padding: 24px; }
             .admin-mobile-toggle { display: none; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 14px; border: 1px solid var(--admin-border); background: var(--admin-surface); box-shadow: var(--admin-shadow); }
+            .admin-sidebar-collapse-toggle { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.2); border-radius: 13px; padding: 0; background: rgba(255,255,255,.1); color: #fff; cursor: pointer; transition: .15s ease; }
+            .admin-sidebar-collapse-toggle:hover { background: rgba(255,255,255,.2); transform: translateY(-1px); }
+            .admin-app.is-sidebar-collapsed .admin-sidebar { padding: 18px 12px; }
+            .admin-app.is-sidebar-collapsed .admin-sidebar__brand { align-items: center; margin-bottom: 18px; }
+            .admin-app.is-sidebar-collapsed .admin-sidebar__eyebrow,
+            .admin-app.is-sidebar-collapsed .admin-sidebar__title,
+            .admin-app.is-sidebar-collapsed .admin-sidebar__text,
+            .admin-app.is-sidebar-collapsed .admin-sidebar__label,
+            .admin-app.is-sidebar-collapsed .admin-sidebar__nav-label,
+            .admin-app.is-sidebar-collapsed .admin-sidebar__nav-meta { display: none; }
+            .admin-app.is-sidebar-collapsed .admin-sidebar__section { margin-top: 18px; }
+            .admin-app.is-sidebar-collapsed .admin-sidebar__nav { justify-items: center; }
+            .admin-app.is-sidebar-collapsed .admin-sidebar__nav a,
+            .admin-app.is-sidebar-collapsed .admin-sidebar__nav button { width: 52px; height: 50px; justify-content: center; padding: 0; }
+            .admin-app.is-sidebar-collapsed .admin-sidebar__nav-icon { font-size: 23px; }
             .admin-topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
             .admin-page-meta { min-width: 0; }
             .admin-page-title { margin: 4px 0 0; font-size: 32px; line-height: 1.1; }
@@ -134,9 +156,22 @@
 
             @media (max-width: 960px) {
                 .admin-app { grid-template-columns: 1fr; }
+                .admin-app.is-sidebar-collapsed { grid-template-columns: 1fr; }
                 .admin-sidebar { position: fixed; inset: 0 auto 0 0; width: min(86vw, 300px); transform: translateX(-100%); transition: transform 0.2s ease; z-index: 50; }
                 .admin-sidebar.is-open { transform: translateX(0); }
+                .admin-app.is-sidebar-collapsed .admin-sidebar { padding: 28px 20px; }
+                .admin-app.is-sidebar-collapsed .admin-sidebar__brand { align-items: stretch; margin-bottom: 28px; }
+                .admin-app.is-sidebar-collapsed .admin-sidebar__eyebrow,
+                .admin-app.is-sidebar-collapsed .admin-sidebar__title,
+                .admin-app.is-sidebar-collapsed .admin-sidebar__text,
+                .admin-app.is-sidebar-collapsed .admin-sidebar__label,
+                .admin-app.is-sidebar-collapsed .admin-sidebar__nav-label,
+                .admin-app.is-sidebar-collapsed .admin-sidebar__nav-meta { display: initial; }
+                .admin-app.is-sidebar-collapsed .admin-sidebar__nav { justify-items: stretch; }
+                .admin-app.is-sidebar-collapsed .admin-sidebar__nav a,
+                .admin-app.is-sidebar-collapsed .admin-sidebar__nav button { width: 100%; height: auto; justify-content: space-between; padding: 12px 14px; }
                 .admin-mobile-toggle { display: inline-flex; }
+                .admin-sidebar-collapse-toggle { display: none; }
                 .admin-main { padding: 18px; }
                 .admin-topbar { align-items: center; }
                 .admin-grid-2,
@@ -157,31 +192,32 @@
 
         @if ($showSidebar)
             <div class="admin-app" data-admin-app>
-                <aside class="admin-sidebar" data-admin-sidebar>
+                <aside id="admin-sidebar" class="admin-sidebar" data-admin-sidebar>
                     <div class="admin-sidebar__brand">
+                        <button type="button" class="admin-sidebar-collapse-toggle" data-admin-sidebar-collapse aria-controls="admin-sidebar" aria-expanded="true" aria-label="Minimize navigation" title="Minimize navigation"><span class="material-symbols-outlined" data-admin-sidebar-collapse-icon>menu_open</span></button>
                         <span class="admin-sidebar__eyebrow">Administration</span>
                         <h1 class="admin-sidebar__title">Control Panel</h1>
-                        <p class="admin-sidebar__text">Secure catalog management for products, categories, installment plans, and account access.</p>
+                        {{-- <p class="admin-sidebar__text">Secure catalog management for products, categories, installment plans, and account access.</p> --}}
                     </div>
 
                     <div class="admin-sidebar__section">
                         <span class="admin-sidebar__label">Navigation</span>
                         <nav class="admin-sidebar__nav">
-                            <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'is-active' : '' }}">Dashboard <span>01</span></a>
-                            <a href="{{ route('admin.categories.index') }}" class="{{ request()->routeIs('admin.categories.*') ? 'is-active' : '' }}">Categories <span>02</span></a>
-                            <a href="{{ route('admin.products.index') }}" class="{{ request()->routeIs('admin.products.*') ? 'is-active' : '' }}">Products <span>03</span></a>
-                            <a href="{{ route('admin.installment-plans.index') }}" class="{{ request()->routeIs('admin.installment-plans.*') ? 'is-active' : '' }}">Installment Plans <span>04</span></a>
-                            <a href="{{ route('admin.installment-applications.index') }}" class="{{ request()->routeIs('admin.installment-applications.*') ? 'is-active' : '' }}">Applications <span>05</span></a>
+                            <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'is-active' : '' }}" aria-label="Dashboard" title="Dashboard"><span class="material-symbols-outlined admin-sidebar__nav-icon">dashboard</span><span class="admin-sidebar__nav-label">Dashboard</span><span class="admin-sidebar__nav-meta">01</span></a>
+                            <a href="{{ route('admin.categories.index') }}" class="{{ request()->routeIs('admin.categories.*') ? 'is-active' : '' }}" aria-label="Categories" title="Categories"><span class="material-symbols-outlined admin-sidebar__nav-icon">category</span><span class="admin-sidebar__nav-label">Categories</span><span class="admin-sidebar__nav-meta">02</span></a>
+                            <a href="{{ route('admin.products.index') }}" class="{{ request()->routeIs('admin.products.*') ? 'is-active' : '' }}" aria-label="Products" title="Products"><span class="material-symbols-outlined admin-sidebar__nav-icon">inventory_2</span><span class="admin-sidebar__nav-label">Products</span><span class="admin-sidebar__nav-meta">03</span></a>
+                            <a href="{{ route('admin.installment-plans.index') }}" class="{{ request()->routeIs('admin.installment-plans.*') ? 'is-active' : '' }}" aria-label="Installment Plans" title="Installment Plans"><span class="material-symbols-outlined admin-sidebar__nav-icon">payments</span><span class="admin-sidebar__nav-label">Installment Plans</span><span class="admin-sidebar__nav-meta">04</span></a>
+                            <a href="{{ route('admin.installment-applications.index') }}" class="{{ request()->routeIs('admin.installment-applications.*') ? 'is-active' : '' }}" aria-label="Applications" title="Applications"><span class="material-symbols-outlined admin-sidebar__nav-icon">assignment</span><span class="admin-sidebar__nav-label">Applications</span><span class="admin-sidebar__nav-meta">05</span></a>
                         </nav>
                     </div>
 
                     <div class="admin-sidebar__section">
                         <span class="admin-sidebar__label">Account</span>
                         <nav class="admin-sidebar__nav">
-                            <a href="{{ route('admin.account.edit') }}" class="{{ request()->routeIs('admin.account.*') ? 'is-active' : '' }}">Profile <span>Me</span></a>
+                            <a href="{{ route('admin.account.edit') }}" class="{{ request()->routeIs('admin.account.*') ? 'is-active' : '' }}" aria-label="Profile" title="Profile"><span class="material-symbols-outlined admin-sidebar__nav-icon">person</span><span class="admin-sidebar__nav-label">Profile</span><span class="admin-sidebar__nav-meta">Me</span></a>
                             <form method="POST" action="{{ route('admin.logout') }}" data-loading-form>
                                 @csrf
-                                <button type="submit">Logout <span>Exit</span></button>
+                                <button type="submit" aria-label="Logout" title="Logout"><span class="material-symbols-outlined admin-sidebar__nav-icon">logout</span><span class="admin-sidebar__nav-label">Logout</span><span class="admin-sidebar__nav-meta">Exit</span></button>
                             </form>
                         </nav>
                     </div>
@@ -225,6 +261,30 @@
         @endif
 
         <script>
+            const adminApp = document.querySelector('[data-admin-app]');
+            const sidebarCollapseToggle = document.querySelector('[data-admin-sidebar-collapse]');
+            const sidebarCollapseIcon = document.querySelector('[data-admin-sidebar-collapse-icon]');
+            const sidebarPreferenceKey = 'admin-sidebar-collapsed';
+
+            const setSidebarCollapsed = (collapsed) => {
+                if (!adminApp || !sidebarCollapseToggle) return;
+
+                adminApp.classList.toggle('is-sidebar-collapsed', collapsed);
+                sidebarCollapseToggle.setAttribute('aria-expanded', String(!collapsed));
+                sidebarCollapseToggle.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Minimize navigation');
+                sidebarCollapseToggle.setAttribute('title', collapsed ? 'Expand navigation' : 'Minimize navigation');
+                if (sidebarCollapseIcon) sidebarCollapseIcon.textContent = collapsed ? 'menu' : 'menu_open';
+                localStorage.setItem(sidebarPreferenceKey, String(collapsed));
+            };
+
+            if (adminApp && sidebarCollapseToggle && localStorage.getItem(sidebarPreferenceKey) === 'true') {
+                setSidebarCollapsed(true);
+            }
+
+            sidebarCollapseToggle?.addEventListener('click', () => {
+                setSidebarCollapsed(!adminApp?.classList.contains('is-sidebar-collapsed'));
+            });
+
             document.querySelectorAll('[data-admin-sidebar-toggle]').forEach((toggle) => {
                 toggle.addEventListener('click', () => {
                     document.querySelector('[data-admin-sidebar]')?.classList.toggle('is-open');

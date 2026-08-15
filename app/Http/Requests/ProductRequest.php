@@ -103,13 +103,12 @@ class ProductRequest extends FormRequest
 
             'installment_plans' => ['nullable', 'array'],
             'installment_plans.*.id' => ['nullable', 'integer', Rule::exists('installment_plans', 'id')],
-            'installment_plans.*.scope' => ['required', Rule::in(['product', 'variant'])],
+            'installment_plans.*.scope' => ['required', Rule::in(['variant'])],
             'installment_plans.*.variant_key' => ['nullable', 'string', 'max:255'],
             'installment_plans.*.product_variant_id' => ['nullable', 'integer', Rule::exists('product_variants', 'id')],
             'installment_plans.*.months' => ['required', 'integer', Rule::in([3, 6, 9])],
-            'installment_plans.*.down_payment' => ['nullable', 'numeric', 'min:0'],
-            'installment_plans.*.financing_fee' => ['nullable', 'numeric', 'min:0'],
-            'installment_plans.*.interval_type' => ['required', Rule::in(app(InstallmentCalculatorService::class)->intervalTypes())],
+            'installment_plans.*.total_amount' => ['required', 'numeric', 'gt:0'],
+            'installment_plans.*.interval_type' => ['nullable', Rule::in(app(InstallmentCalculatorService::class)->intervalTypes())],
             'installment_plans.*.is_active' => ['nullable', 'boolean'],
         ];
     }
@@ -164,6 +163,19 @@ class ProductRequest extends FormRequest
 
         foreach (($payload['installment_plans'] ?? []) as $planIndex => $plan) {
             $payload['installment_plans'][$planIndex]['is_active'] = filter_var($plan['is_active'] ?? true, FILTER_VALIDATE_BOOL);
+            $payload['installment_plans'][$planIndex]['scope'] = 'variant';
+            $payload['installment_plans'][$planIndex]['interval_type'] = InstallmentCalculatorService::INTERVAL_MONTHLY;
+            $payload['installment_plans'][$planIndex]['down_payment'] = 0;
+            $payload['installment_plans'][$planIndex]['financing_fee'] = 0;
+        }
+
+        foreach (($payload['variants'] ?? []) as $variantIndex => $variant) {
+            $variantKey = (string) ($variant['client_key'] ?? $variant['id'] ?? 'variant-'.$variantIndex);
+            $threePaymentPlan = collect($payload['installment_plans'] ?? [])->first(fn (array $plan) => (string) ($plan['variant_key'] ?? $plan['product_variant_id'] ?? '') === $variantKey && (int) ($plan['months'] ?? 0) === 3);
+
+            if ($threePaymentPlan !== null && filled($threePaymentPlan['total_amount'] ?? null)) {
+                $payload['variants'][$variantIndex]['price'] = $threePaymentPlan['total_amount'];
+            }
         }
 
         $this->replace($payload);
@@ -387,8 +399,6 @@ class ProductRequest extends FormRequest
         foreach ($this->input('installment_plans', []) as $planIndex => $plan) {
             $scope = ($plan['scope'] ?? 'product') === 'variant' ? 'variant' : 'product';
             $payments = (int) ($plan['months'] ?? $plan['number_of_payments'] ?? 0);
-            $downPayment = (float) ($plan['down_payment'] ?? 0);
-            $financingFee = (float) ($plan['financing_fee'] ?? 0);
             $variantId = filled($plan['product_variant_id'] ?? null) ? (int) $plan['product_variant_id'] : null;
             $variantKey = filled($plan['variant_key'] ?? null) ? (string) $plan['variant_key'] : null;
 
@@ -422,26 +432,6 @@ class ProductRequest extends FormRequest
                 $validator->errors()->add("installment_plans.{$planIndex}.variant_key", 'The selected variant is not part of this product submission.');
             }
 
-            if ($scope === 'variant') {
-                $targetVariant = $variantId
-                    ? ProductVariant::query()->find($variantId)
-                    : $submittedVariants->get($variantKey);
-
-                $variantPrice = (float) ($targetVariant['price'] ?? $targetVariant?->price ?? 0);
-
-                if ($downPayment > ($variantPrice + $financingFee)) {
-                    $validator->errors()->add("installment_plans.{$planIndex}.down_payment", 'Down payment cannot exceed the total.');
-                }
-            }
-
-            if ($scope === 'product') {
-                $lowestSubmittedPrice = $submittedVariants->min(fn (array $variant) => (float) ($variant['price'] ?? 0)) ?? 0;
-
-                if ($downPayment > ($lowestSubmittedPrice + $financingFee)) {
-                    $validator->errors()->add("installment_plans.{$planIndex}.down_payment", 'Down payment cannot exceed the total.');
-                }
-            }
-
             if (filter_var($plan['is_active'] ?? true, FILTER_VALIDATE_BOOL)) {
                 $scopeKey = $scope === 'variant'
                     ? 'variant:'.($variantId ?? $variantKey)
@@ -460,6 +450,22 @@ class ProductRequest extends FormRequest
 
                 if ($existingPlan && $product !== null && $existingPlan->product_id !== $product->id) {
                     $validator->errors()->add("installment_plans.{$planIndex}.id", 'The selected installment plan does not belong to this product.');
+                }
+            }
+        }
+
+        $activeVariants = $submittedVariants->filter(fn (array $variant) => filter_var($variant['is_active'] ?? true, FILTER_VALIDATE_BOOL));
+        foreach ($activeVariants as $variantKey => $variant) {
+            foreach ([3, 6, 9] as $payments) {
+                $plan = collect($this->input('installment_plans', []))->first(function (array $entry) use ($payments, $variantKey, $variant): bool {
+                    $matchesVariant = (string) ($entry['variant_key'] ?? '') === (string) $variantKey
+                        || (filled($entry['product_variant_id'] ?? null) && (int) $entry['product_variant_id'] === (int) ($variant['id'] ?? 0));
+
+                    return (int) ($entry['months'] ?? 0) === $payments && $matchesVariant;
+                });
+
+                if ($plan === null) {
+                    $validator->errors()->add('installment_plans', "{$payments}-payment total is required for every active variant.");
                 }
             }
         }

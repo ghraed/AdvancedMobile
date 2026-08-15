@@ -335,7 +335,7 @@ class CatalogModelsTest extends TestCase
         $rounding = $service->calculatePlan(1000, 3, 0, 0, 'monthly');
 
         $this->assertTrue($resolved->is($expected));
-        $this->assertSame([500.00, 500.00], $rounding['schedule']);
+        $this->assertSame([333.33, 333.34], $rounding['schedule']);
         $this->assertSame(2, $rounding['future_payment_count']);
         $this->assertSame(1000.00, $rounding['amount_due_now'] + array_sum($rounding['schedule']));
     }
@@ -349,8 +349,8 @@ class CatalogModelsTest extends TestCase
         $six = $service->calculatePlan(1200, 6, 0, 0, 'monthly', $startingAt);
         $nine = $service->calculatePlan(999.99, 9, 0, 0, 'monthly', $startingAt);
 
-        $this->assertSame(100.00, $three['amount_due_now']);
-        $this->assertSame([460.00, 460.00], $three['schedule']);
+        $this->assertSame(340.00, $three['amount_due_now']);
+        $this->assertSame([340.00, 340.00], $three['schedule']);
         $this->assertSame(['2026-02-28', '2026-03-31'], array_column($three['future_installments'], 'due_date'));
 
         $this->assertCount(5, $six['future_installments']);
@@ -358,7 +358,7 @@ class CatalogModelsTest extends TestCase
 
         $this->assertCount(8, $nine['future_installments']);
         $this->assertSame(999.99, round($nine['amount_due_now'] + array_sum($nine['schedule']), 2));
-        $this->assertSame(125.00, $nine['installment_amount']);
-        $this->assertSame(124.99, $nine['final_installment_amount']);
+        $this->assertSame(111.11, $nine['installment_amount']);
+        $this->assertSame(111.11, $nine['final_installment_amount']);
     }
 }

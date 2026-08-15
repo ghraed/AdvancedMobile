@@ -38,21 +38,18 @@ class InstallmentCalculatorService
         }
 
         $priceCents = $this->toCents($price);
-        $downPaymentCents = $this->toCents($downPayment);
         $financingFeeCents = $this->toCents($financingFee);
         $totalAmountCents = $priceCents + $financingFeeCents;
 
-        if ($downPaymentCents > $totalAmountCents) {
-            throw new DomainException('Down payment cannot exceed the total amount.');
-        }
-
-        $remainingBalanceCents = $totalAmountCents - $downPaymentCents;
-        // A plan's count includes the payment due today. Its remaining payments
-        // are therefore one fewer, and the final one absorbs any cent rounding.
+        // The product or variant price is the plan total. The payment count
+        // includes today's first installment, so each plan divides that total
+        // by its full number of payments. The final payment absorbs rounding.
+        // Down payments are retained in the method signature for backwards
+        // compatibility with stored plans, but do not affect this calculation.
         $futurePaymentCount = $numberOfPayments - 1;
-        $regularInstallmentCents = (int) round($remainingBalanceCents / $futurePaymentCount);
-        $finalInstallmentCents = $remainingBalanceCents - ($regularInstallmentCents * ($futurePaymentCount - 1));
-        $dueNowCents = $downPaymentCents;
+        $regularInstallmentCents = (int) round($totalAmountCents / $numberOfPayments);
+        $finalInstallmentCents = $totalAmountCents - ($regularInstallmentCents * ($numberOfPayments - 1));
+        $dueNowCents = $regularInstallmentCents;
         $scheduleStart = $startingAt ?? CarbonImmutable::now();
 
         $futureInstallments = [];
@@ -67,7 +64,7 @@ class InstallmentCalculatorService
 
         return [
             'price' => $this->fromCents($priceCents),
-            'down_payment' => $this->fromCents($downPaymentCents),
+            'down_payment' => 0.0,
             'financing_fee' => $this->fromCents($financingFeeCents),
             'amount_due_now' => $this->fromCents($dueNowCents),
             'number_of_payments' => $numberOfPayments,
@@ -76,7 +73,7 @@ class InstallmentCalculatorService
             'final_installment_amount' => $this->fromCents($finalInstallmentCents),
             'future_installments' => $futureInstallments,
             'total_amount' => $this->fromCents($totalAmountCents),
-            'total_financed_amount' => $this->fromCents($remainingBalanceCents),
+            'total_financed_amount' => $this->fromCents($totalAmountCents),
             'interval_type' => $intervalType,
         ];
     }

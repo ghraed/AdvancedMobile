@@ -37,8 +37,8 @@ class AdminProductManagementTest extends TestCase
         $this->assertSame(4, $product->variants->count());
         $this->assertSame(['Display', 'Battery'], collect($product->specifications)->pluck('key')->all());
         $this->assertCount(1, $product->images);
-        $this->assertCount(2, $product->installmentPlans);
-        $this->assertSame([null, $product->variants->sortBy('price')->first()?->id], $product->installmentPlans->sortBy('number_of_payments')->pluck('product_variant_id')->all());
+        $this->assertCount(12, $product->installmentPlans);
+        $this->assertSame(4, $product->installmentPlans->where('number_of_payments', 3)->count());
         Storage::disk('public')->assertExists($product->images->first()->image_path);
     }
 
@@ -51,19 +51,16 @@ class AdminProductManagementTest extends TestCase
 
         $payload = $this->validPayload($category->id);
         $payload['installment_plans'][] = [
-            'scope' => 'product',
+            'scope' => 'variant',
+            'variant_key' => 'variant-128-black',
             'months' => 3,
-            'down_payment' => 0,
-            'financing_fee' => 10,
-            'interval_type' => 'monthly',
+            'total_amount' => 900,
             'is_active' => 1,
         ];
         $payload['installment_plans'][] = [
             'scope' => 'variant',
             'months' => 9,
-            'down_payment' => 0,
-            'financing_fee' => 0,
-            'interval_type' => 'monthly',
+            'total_amount' => 900,
             'product_variant_id' => $foreignVariant->id,
             'variant_key' => 'foreign',
             'is_active' => 1,
@@ -74,8 +71,8 @@ class AdminProductManagementTest extends TestCase
             ->post(route('admin.products.store'), $payload)
             ->assertRedirect(route('admin.products.create'))
             ->assertSessionHasErrors([
-                'installment_plans.2.months',
-                'installment_plans.3.product_variant_id',
+                'installment_plans.12.months',
+                'installment_plans.13.product_variant_id',
             ]);
     }
 
@@ -99,10 +96,9 @@ class AdminProductManagementTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $response = $this->actingAs($admin)->postJson(route('admin.products.installment-preview.create'), [
-            'scope' => 'product',
+            'scope' => 'variant',
             'number_of_payments' => 3,
-            'down_payment' => 100,
-            'financing_fee' => 20,
+            'total_amount' => 1020,
             'interval_type' => 'monthly',
             'variants' => [
                 ['client_key' => 'variant-1', 'sku' => 'PIX-128-BLK', 'price' => 1000],
@@ -110,10 +106,10 @@ class AdminProductManagementTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertJsonPath('preview.amount_due_now', 100)
+            ->assertJsonPath('preview.amount_due_now', 340)
             ->assertJsonPath('preview.future_payment_count', 2)
             ->assertJsonPath('preview.total_amount', 1020)
-            ->assertJsonPath('preview.future_installments.1.amount', 460);
+            ->assertJsonPath('preview.future_installments.1.amount', 340);
     }
 
     public function test_variant_payload_must_have_unique_skus_and_unique_option_combinations(): void
@@ -273,10 +269,13 @@ class AdminProductManagementTest extends TestCase
                 $this->variantRow('PIX-256-BLK', 999.00, 1099.00, 3, '256 GB', 'Black', 'variant-256-black'),
                 $this->variantRow('PIX-256-GRY', 999.00, 1099.00, 0, '256 GB', 'Grey', 'variant-256-grey'),
             ],
-            'installment_plans' => [
-                ['scope' => 'product', 'months' => 3, 'down_payment' => 0, 'financing_fee' => 0, 'interval_type' => 'monthly', 'is_active' => 1],
-                ['scope' => 'variant', 'variant_key' => 'variant-128-black', 'months' => 6, 'down_payment' => 99.00, 'financing_fee' => 30.00, 'interval_type' => 'monthly', 'is_active' => 1],
-            ],
+            'installment_plans' => collect([
+                ['key' => 'variant-128-black', 'total' => 899.00], ['key' => 'variant-128-grey', 'total' => 899.00],
+                ['key' => 'variant-256-black', 'total' => 999.00], ['key' => 'variant-256-grey', 'total' => 999.00],
+            ])->flatMap(fn (array $variant) => collect([3, 6, 9])->map(fn (int $months) => [
+                'scope' => 'variant', 'variant_key' => $variant['key'], 'months' => $months,
+                'total_amount' => $variant['total'] + ($months === 6 ? 60 : ($months === 9 ? 120 : 0)), 'is_active' => 1,
+            ]))->values()->all(),
         ];
     }
 

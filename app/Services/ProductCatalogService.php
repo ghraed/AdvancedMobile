@@ -242,6 +242,7 @@ class ProductCatalogService
                 'variant_key' => filled($plan['variant_key'] ?? null) ? (string) $plan['variant_key'] : null,
                 'product_variant_id' => filled($plan['product_variant_id'] ?? null) ? (int) $plan['product_variant_id'] : null,
                 'number_of_payments' => (int) ($plan['number_of_payments'] ?? $plan['months'] ?? 0),
+                'total_amount' => round((float) ($plan['total_amount'] ?? 0), 2),
                 'down_payment' => round((float) ($plan['down_payment'] ?? 0), 2),
                 'financing_fee' => round((float) ($plan['financing_fee'] ?? 0), 2),
                 'interval_type' => $plan['interval_type'] ?? InstallmentCalculatorService::INTERVAL_MONTHLY,
@@ -359,13 +360,13 @@ class ProductCatalogService
                 $variant = $variantMap->get($row['variant_key'] ?? $row['product_variant_id']);
             }
 
-            $price = $variant ? (float) $variant->price : (float) ($variantMap->first()?->price ?? 0);
+            $price = (float) ($row['total_amount'] ?? 0);
 
             $resolved = $this->installmentPlanService->resolvePlanPayload(
                 $price,
                 (int) $row['number_of_payments'],
-                (float) ($row['down_payment'] ?? 0),
-                (float) ($row['financing_fee'] ?? 0),
+                0,
+                0,
                 (string) ($row['interval_type'] ?? InstallmentCalculatorService::INTERVAL_MONTHLY),
             );
 
@@ -376,7 +377,7 @@ class ProductCatalogService
                 'down_payment' => $resolved['down_payment'],
                 'financing_fee' => $resolved['financing_fee'],
                 'installment_amount' => $resolved['installment_amount'],
-                'total_amount' => $resolved['total_amount'],
+                'total_amount' => $price,
                 'interval_type' => $row['interval_type'] ?? InstallmentCalculatorService::INTERVAL_MONTHLY,
                 'is_active' => (bool) ($row['is_active'] ?? true),
             ]);

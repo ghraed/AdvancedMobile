@@ -198,8 +198,7 @@ class ProductController extends Controller
             'variant_key' => ['nullable', 'string'],
             'product_variant_id' => ['nullable', 'integer'],
             'number_of_payments' => ['required', 'integer', 'in:3,6,9'],
-            'down_payment' => ['nullable', 'numeric', 'min:0'],
-            'financing_fee' => ['nullable', 'numeric', 'min:0'],
+            'total_amount' => ['required', 'numeric', 'gt:0'],
             'interval_type' => ['required', 'in:'.implode(',', $this->installmentCalculatorService->intervalTypes())],
             'variants' => ['nullable', 'array'],
             'variants.*.client_key' => ['nullable', 'string'],
@@ -209,7 +208,7 @@ class ProductController extends Controller
         ]);
 
         try {
-            $price = $this->previewVariantPrice($validated, $product);
+            $price = (float) $validated['total_amount'];
             $preview = $this->installmentPlanService->previewFromPayload($validated, $price);
 
             return response()->json([

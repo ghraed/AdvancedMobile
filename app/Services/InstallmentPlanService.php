@@ -71,10 +71,10 @@ class InstallmentPlanService
     public function previewFromPayload(array $plan, float $price, ?CarbonImmutable $startingAt = null): array
     {
         return $this->resolvePlanPayload(
-            $price,
+            (float) ($plan['total_amount'] ?? $price),
             (int) ($plan['number_of_payments'] ?? 0),
-            (float) ($plan['down_payment'] ?? 0),
-            (float) ($plan['financing_fee'] ?? 0),
+            0,
+            0,
             (string) ($plan['interval_type'] ?? InstallmentCalculatorService::INTERVAL_MONTHLY),
             $startingAt,
         );
@@ -108,15 +108,14 @@ class InstallmentPlanService
         $variantPlans = $variant->relationLoaded('installmentPlans')
             ? $variant->installmentPlans->where('is_active', true)
             : $variant->installmentPlans()->active()->get();
-        $productPlans = $product->relationLoaded('installmentPlans')
-            ? $product->installmentPlans->filter(fn (InstallmentPlan $plan) => $plan->is_active && $plan->product_variant_id === null)
-            : $product->installmentPlans()->active()->whereNull('product_variant_id')->get();
 
-        $variantKeys = $variantPlans->mapWithKeys(fn (InstallmentPlan $plan) => [$plan->number_of_payments.'|'.$plan->interval_type => $plan]);
+        $plans = $variantPlans->whereIn('number_of_payments', [3, 6, 9])
+            ->where('interval_type', InstallmentCalculatorService::INTERVAL_MONTHLY)
+            ->sortBy('number_of_payments')->values();
 
-        return $productPlans->map(fn (InstallmentPlan $plan) => $variantKeys->get($plan->number_of_payments.'|'.$plan->interval_type, $plan))
-            ->merge($variantPlans->reject(fn (InstallmentPlan $plan) => $productPlans->contains(fn (InstallmentPlan $base) => $base->number_of_payments === $plan->number_of_payments && $base->interval_type === $plan->interval_type)))
-            ->sortBy([['number_of_payments', 'asc'], ['interval_type', 'asc']])->values();
+        return $plans->count() === 3 && $plans->pluck('number_of_payments')->sort()->values()->all() === [3, 6, 9]
+            ? $plans
+            : collect();
     }
 
     public function resolvePriceForPlan(Product $product, InstallmentPlan $plan, ?ProductVariant $selectedVariant = null): float
