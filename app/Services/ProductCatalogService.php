@@ -392,11 +392,28 @@ class ProductCatalogService
 
     protected function syncVariants(Product $product, array $rows, Collection $optionValues): Collection
     {
-        $existing = $product->variants()->with(['images', 'optionValues.productOption'])->get()->keyBy('id');
+        $existingVariants = $product->variants()->with(['images', 'optionValues.productOption'])->get();
+        $existing = $existingVariants->keyBy('id');
+        $existingBySku = $existingVariants->keyBy(fn (ProductVariant $variant) => Str::upper(trim($variant->sku)));
+
+        if ($rows === []) {
+            return $existingVariants->reduce(function (Collection $variants, ProductVariant $variant): Collection {
+                $variants->put((string) $variant->id, $variant);
+
+                return $variants;
+            }, collect());
+        }
         $keptIds = [];
         $saved = collect();
         $submittedVariantIds = collect($rows)
-            ->pluck('id')
+            ->map(function (array $row) use ($existingBySku) {
+                $submittedId = $row['id'] ?? $row['client_key'] ?? null;
+                if (filled($submittedId) && ctype_digit((string) $submittedId)) {
+                    return (int) $submittedId;
+                }
+
+                return $existingBySku->get(Str::upper(trim((string) ($row['sku'] ?? ''))))?->id;
+            })
             ->filter()
             ->map(fn ($id) => (int) $id)
             ->all();
@@ -419,7 +436,10 @@ class ProductCatalogService
 
         foreach ($rows as $row) {
             $selectedValueIds = $this->resolveOptionValueIds($optionValues, $row);
-            $variant = isset($row['id']) ? $existing->get((int) $row['id']) : new ProductVariant;
+            $submittedId = $row['id'] ?? $row['client_key'] ?? null;
+            $variant = filled($submittedId) && ctype_digit((string) $submittedId)
+                ? $existing->get((int) $submittedId)
+                : $existingBySku->get(Str::upper(trim((string) ($row['sku'] ?? ''))));
             $variant ??= new ProductVariant;
             $variant->product()->associate($product);
             $variant->fill([

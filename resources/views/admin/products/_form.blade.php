@@ -228,26 +228,7 @@
             <button type="button" class="admin-button admin-button--secondary" id="generate-variants">Generate Combinations</button>
         </div>
     </div>
-    @if ($product->exists)
-        <label style="display:flex; gap:10px; align-items:flex-start; margin-bottom:16px;">
-            <input type="hidden" name="confirm_variant_retirement" value="0">
-            <input type="checkbox" name="confirm_variant_retirement" value="1" @checked(old('confirm_variant_retirement'))>
-            <span class="admin-help">Tick this before removing existing combinations that already have stock. Removed existing variants are preserved as inactive records instead of being deleted.</span>
-        </label>
-    @else
-        <input type="hidden" name="confirm_variant_retirement" value="0">
-    @endif
     <div class="admin-grid" id="variants-root"></div>
-</div>
-
-<div class="admin-card">
-    <div class="admin-card__header">
-        <div>
-            <h3 class="admin-card__title">Installment Plans</h3>
-            <p class="admin-card__copy">Set the final total for 3, 6, and 9 payments for every active variant. The 3-payment total becomes the variant price.</p>
-        </div>
-    </div>
-    <div class="admin-grid" id="plans-root"></div>
 </div>
 
 <div class="admin-card">
@@ -300,6 +281,17 @@
         .variant-table th, .variant-table td { padding: 10px 8px; border-bottom: 1px solid var(--admin-border); text-align: left; vertical-align: top; }
         .variant-table th { color: var(--admin-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
         .variant-table .admin-input { min-width: 84px; padding: 8px 10px; }
+        .variant-table .variant-stock-column { width: 76px; }
+        .variant-table .variant-stock-input { width: 76px; min-width: 76px; padding-inline: 8px; }
+        .variant-table .variant-sync-column { width: 38px; text-align: center; }
+        .variant-table .variant-sync-select { width: 16px; height: 16px; accent-color: var(--admin-primary); cursor: pointer; }
+        .admin-toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+        .admin-toggle__input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+        .admin-toggle__track { display: inline-flex; align-items: center; width: 42px; height: 24px; padding: 3px; border-radius: 999px; background: #94a3b8; box-shadow: inset 0 1px 2px rgba(15,23,42,.22); transition: background .18s ease, box-shadow .18s ease; }
+        .admin-toggle__thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(15,23,42,.26); transition: transform .18s ease; }
+        .admin-toggle__input:checked + .admin-toggle__track { background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-soft)); }
+        .admin-toggle__input:checked + .admin-toggle__track .admin-toggle__thumb { transform: translateX(18px); }
+        .admin-toggle__input:focus-visible + .admin-toggle__track { outline: 3px solid rgba(37,99,235,.32); outline-offset: 3px; }
         .variant-advanced { display: grid; gap: 12px; min-width: 300px; padding-top: 12px; }
         @media (max-width: 760px) {
             .variant-table, .variant-table tbody, .variant-table tr, .variant-table td { display: block; width: 100%; }
@@ -309,6 +301,8 @@
             .variant-table td::before { content: attr(data-label); color: var(--admin-muted); font-size: 12px; font-weight: 700; }
             .variant-table td[data-label="Advanced"] { display: block; }
             .variant-table td[data-label="Advanced"]::before { display: none; }
+            .variant-table td.variant-sync-column { display: block; text-align: left; }
+            .variant-table td.variant-sync-column::before { display: none; }
         }
     </style>
 @endpush
@@ -333,7 +327,6 @@
                 productImages: document.getElementById('product-images-root'),
                 colorImages: document.getElementById('color-images-root'),
                 specifications: document.getElementById('specifications-root'),
-                plans: document.getElementById('plans-root'),
             };
             const previewModal = document.getElementById('installment-preview-modal');
             const previewBody = document.getElementById('installment-preview-body');
@@ -586,9 +579,26 @@
             const syncColorImageInputs = () => {
                 state.colorImages.forEach((gallery, galleryIndex) => (gallery.images || []).forEach((image, imageIndex) => {
                     const value = (field) => document.querySelector(`input[name="color_images[${galleryIndex}][images][${imageIndex}][${field}]"]`)?.value;
+                    const upload = document.querySelector(`input[data-color-image-upload="${galleryIndex}:${imageIndex}"]`)?.files?.[0];
                     image.alt_text = value('alt_text') ?? image.alt_text;
                     image.sort_order = value('sort_order') ?? image.sort_order;
                     image.is_primary = document.querySelector(`input[name="color_images[${galleryIndex}][images][${imageIndex}][is_primary]"][value="1"]`)?.checked ?? image.is_primary;
+                    if (upload) image.upload = upload;
+                }));
+            };
+
+            const restoreColorImageUploads = () => {
+                state.colorImages.forEach((gallery, galleryIndex) => (gallery.images || []).forEach((image, imageIndex) => {
+                    if (!image.upload) return;
+
+                    const input = roots.colorImages.querySelector(`input[data-color-image-upload="${galleryIndex}:${imageIndex}"]`);
+                    const preview = input?.closest('.product-form-card')?.querySelector('[data-image-preview]');
+                    if (!input || !preview || typeof DataTransfer === 'undefined') return;
+
+                    const transfer = new DataTransfer();
+                    transfer.items.add(image.upload);
+                    input.files = transfer.files;
+                    preview.innerHTML = `<img src="${URL.createObjectURL(image.upload)}" alt="" class="product-form-image-preview">`;
                 }));
             };
 
@@ -608,7 +618,7 @@
                             <div class="product-form-card">
                                 <input type="hidden" name="color_images[${galleryIndex}][images][${imageIndex}][id]" value="${image.id || ''}">
                                 <input type="hidden" name="color_images[${galleryIndex}][images][${imageIndex}][image_path]" value="${escapeHtml(image.image_path || '')}">
-                                <div class="admin-inline" style="align-items:flex-start; justify-content:space-between;"><div class="admin-inline" style="align-items:flex-start;"><div data-image-preview>${buildPreview(image.image_path || '')}</div><div class="admin-grid"><div class="admin-field"><label class="admin-label">Upload Image</label><input class="admin-file-input" type="file" name="color_images[${galleryIndex}][images][${imageIndex}][upload]" accept="image/*"></div><div class="admin-field"><label class="admin-label">Alt Text</label><input class="admin-input" name="color_images[${galleryIndex}][images][${imageIndex}][alt_text]" value="${escapeHtml(image.alt_text || '')}"></div><div class="admin-field"><label class="admin-label">Sort Order</label><input class="admin-input" type="number" min="0" name="color_images[${galleryIndex}][images][${imageIndex}][sort_order]" value="${image.sort_order ?? imageIndex}"></div></div></div><button type="button" class="admin-link" data-remove-color-image="${galleryIndex}:${imageIndex}">Remove</button></div>
+                                <div class="admin-inline" style="align-items:flex-start; justify-content:space-between;"><div class="admin-inline" style="align-items:flex-start;"><div data-image-preview>${buildPreview(image.image_path || '')}</div><div class="admin-grid"><div class="admin-field"><label class="admin-label">Upload Image</label><input class="admin-file-input" type="file" name="color_images[${galleryIndex}][images][${imageIndex}][upload]" data-color-image-upload="${galleryIndex}:${imageIndex}" accept="image/*"></div><div class="admin-field"><label class="admin-label">Alt Text</label><input class="admin-input" name="color_images[${galleryIndex}][images][${imageIndex}][alt_text]" value="${escapeHtml(image.alt_text || '')}"></div><div class="admin-field"><label class="admin-label">Sort Order</label><input class="admin-input" type="number" min="0" name="color_images[${galleryIndex}][images][${imageIndex}][sort_order]" value="${image.sort_order ?? imageIndex}"></div></div></div><button type="button" class="admin-link" data-remove-color-image="${galleryIndex}:${imageIndex}">Remove</button></div>
                                 <label style="display:flex; gap:10px; align-items:center; margin-top:12px;"><input type="hidden" name="color_images[${galleryIndex}][images][${imageIndex}][is_primary]" value="0"><input type="checkbox" name="color_images[${galleryIndex}][images][${imageIndex}][is_primary]" value="1" ${image.is_primary ? 'checked' : ''} data-primary-color-image="${galleryIndex}:${imageIndex}"><span>Primary image</span></label>
                             </div>`).join('') || '<div class="admin-help">No images yet.</div>'}</div>
                     </section>`).join('') : '<div class="admin-help">Add an active color value to manage its gallery.</div>';
@@ -622,6 +632,7 @@
                 roots.colorImages.querySelectorAll('[data-primary-color-image]').forEach((button) => button.addEventListener('change', () => {
                     syncColorImageInputs(); const [galleryIndex, imageIndex] = button.dataset.primaryColorImage.split(':').map(Number); state.colorImages[galleryIndex].images = state.colorImages[galleryIndex].images.map((image, index) => ({ ...image, is_primary: index === imageIndex })); buildColorImages();
                 }));
+                restoreColorImageUploads();
                 bindImageInputs(roots.colorImages);
             };
 
@@ -664,33 +675,7 @@
                 });
             };
 
-            const buildPlans = () => {
-                syncPlanVariantTargets();
-                if (!state.variants.length) {
-                    roots.plans.innerHTML = '<div class="admin-empty-state"><h3>Generate variants first</h3><p>Each active variant needs a final total for 3, 6, and 9 payments.</p></div>';
-                    return;
-                }
-
-                roots.plans.innerHTML = `<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Variant</th>${paymentTerms.map((term) => `<th>${term} Payments Total</th>`).join('')}</tr></thead><tbody>${state.variants.map((variant) => `<tr><td><strong>${escapeHtml(variantLabel(variant))}</strong><br><span class="admin-help">${escapeHtml(variant.sku || 'No SKU')}</span></td>${paymentTerms.map((term) => {
-                    const index = state.plans.findIndex((plan) => plan.scope === 'variant' && plan.months === term && (plan.variant_key === variant.client_key || String(plan.product_variant_id || '') === String(variant.id || '')));
-                    const plan = state.plans[index];
-                    return `<td><input type="hidden" name="installment_plans[${index}][id]" value="${plan.id || ''}"><input type="hidden" name="installment_plans[${index}][scope]" value="variant"><input type="hidden" name="installment_plans[${index}][variant_key]" value="${escapeHtml(variant.client_key || '')}"><input type="hidden" name="installment_plans[${index}][product_variant_id]" value="${escapeHtml(variant.id || '')}"><input type="hidden" name="installment_plans[${index}][months]" value="${term}"><input type="hidden" name="installment_plans[${index}][is_active]" value="1"><div class="admin-inline"><input class="admin-input" type="number" step="0.01" min="0.01" required name="installment_plans[${index}][total_amount]" data-plan-total="${index}" value="${escapeHtml(plan.total_amount || '')}" aria-label="${term} payments total for ${escapeHtml(variantLabel(variant))}"><button type="button" class="admin-link" data-preview-plan="${index}" aria-label="Preview ${term} payment schedule">Preview</button></div></td>`;
-                }).join('')}</tr>`).join('')}</tbody></table></div>`;
-
-                roots.plans.querySelectorAll('[data-plan-total]').forEach((input) => input.addEventListener('input', () => {
-                    const index = Number(input.dataset.planTotal);
-                    state.plans[index].total_amount = input.value;
-                    if (state.plans[index].months === 3) {
-                        const variantIndex = state.variants.findIndex((entry) => entry.client_key === state.plans[index].variant_key);
-                        if (variantIndex >= 0) {
-                            state.variants[variantIndex].price = input.value;
-                            const variantPriceInput = document.querySelector(`input[name="variants[${variantIndex}][price]"]`);
-                            if (variantPriceInput) variantPriceInput.value = input.value;
-                        }
-                    }
-                }));
-                roots.plans.querySelectorAll('[data-preview-plan]').forEach((button) => button.addEventListener('click', () => previewPlan(Number(button.dataset.previewPlan))));
-            };
+            const buildPlans = () => syncPlanVariantTargets();
 
             const variantLabel = (variant) => variant.option_values.map((value) => value.name).join(' / ') || 'Variant';
 
@@ -739,6 +724,13 @@
                 </div>
             `).join('');
 
+            const installmentCell = (variant, term) => {
+                const index = state.plans.findIndex((plan) => plan.months === term && (plan.variant_key === variant.client_key || String(plan.product_variant_id || '') === String(variant.id || '')));
+                const plan = state.plans[index];
+
+                return `<td data-label="${term} Payments Total"><input type="hidden" name="installment_plans[${index}][id]" value="${plan.id || ''}"><input type="hidden" name="installment_plans[${index}][scope]" value="variant"><input type="hidden" name="installment_plans[${index}][variant_key]" value="${escapeHtml(variant.client_key || '')}"><input type="hidden" name="installment_plans[${index}][product_variant_id]" value="${escapeHtml(variant.id || '')}"><input type="hidden" name="installment_plans[${index}][months]" value="${term}"><input type="hidden" name="installment_plans[${index}][is_active]" value="1"><input class="admin-input" type="number" step="0.01" min="0.01" required name="installment_plans[${index}][total_amount]" data-plan-total="${index}" data-variant-sync-field="plan-${term}" value="${escapeHtml(plan.total_amount || '')}" aria-label="${term} payments total for ${escapeHtml(variantLabel(variant))}"></td>`;
+            };
+
             const buildVariants = () => {
                 syncPlanVariantTargets();
                 if (state.variants.length === 0) {
@@ -747,17 +739,53 @@
                     return;
                 }
 
-                roots.variants.innerHTML = `<div class="variant-table-wrap"><table class="variant-table"><thead><tr><th>Combination</th><th>SKU</th><th>Price</th><th>Compare At</th><th>Stock</th><th>Active</th><th>Advanced</th></tr></thead><tbody>${state.variants.map((variant, variantIndex) => `
-                    <tr>
+                roots.variants.innerHTML = `<div class="variant-table-wrap"><table class="variant-table"><thead><tr><th class="variant-sync-column"></th><th>Combination</th><th>SKU</th><th>3 Payments Total</th><th>6 Payments Total</th><th>9 Payments Total</th><th>Compare At</th><th class="variant-stock-column">Stock</th><th>Active</th><th>Advanced</th></tr></thead><tbody>${state.variants.map((variant, variantIndex) => `
+                    <tr data-variant-record="${variantIndex}">
+                        <td class="variant-sync-column"><input class="variant-sync-select" type="checkbox" data-variant-sync-select="${variantIndex}" aria-label="Select variant"></td>
                         <td data-label="Combination"><strong>${escapeHtml(variantLabel(variant))}</strong><input type="hidden" name="variants[${variantIndex}][id]" value="${variant.id || ''}"><input type="hidden" name="variants[${variantIndex}][client_key]" value="${escapeHtml(variant.client_key || '')}">${variant.option_values.map((value, valueIndex) => `<input type="hidden" name="variants[${variantIndex}][option_value_ids][]" value="${value.id || ''}"><input type="hidden" name="variants[${variantIndex}][option_values][${valueIndex}][id]" value="${value.id || ''}"><input type="hidden" name="variants[${variantIndex}][option_values][${valueIndex}][option_slug]" value="${escapeHtml(value.option_slug || '')}"><input type="hidden" name="variants[${variantIndex}][option_values][${valueIndex}][name]" value="${escapeHtml(value.name || '')}">`).join('')}</td>
-                        <td data-label="SKU"><input class="admin-input" name="variants[${variantIndex}][sku]" value="${escapeHtml(variant.sku || '')}" required></td>
-                        <td data-label="3-Payment Total"><input class="admin-input" type="number" step="0.01" min="0" name="variants[${variantIndex}][price]" value="${escapeHtml(variant.price || '')}" required readonly aria-label="3-payment total, set in installment pricing"></td>
-                        <td data-label="Compare At"><input class="admin-input" type="number" step="0.01" min="0" name="variants[${variantIndex}][compare_at_price]" value="${escapeHtml(variant.compare_at_price || '')}"></td>
-                        <td data-label="Stock"><input class="admin-input" type="number" min="0" name="variants[${variantIndex}][stock_quantity]" value="${escapeHtml(variant.stock_quantity ?? 0)}" required></td>
-                        <td data-label="Active"><label><input type="hidden" name="variants[${variantIndex}][is_active]" value="0"><input type="checkbox" name="variants[${variantIndex}][is_active]" value="1" ${variant.is_active === false ? '' : 'checked'}><span class="sr-only">Active variant</span></label></td>
+                        <td data-label="SKU"><input class="admin-input" name="variants[${variantIndex}][sku]" data-variant-sync-field="sku" value="${escapeHtml(variant.sku || '')}" required></td>
+                        ${installmentCell(variant, 3)}
+                        ${installmentCell(variant, 6)}
+                        ${installmentCell(variant, 9)}
+                        <td data-label="Compare At"><input class="admin-input" type="number" step="0.01" min="0" name="variants[${variantIndex}][compare_at_price]" data-variant-sync-field="compare_at_price" value="${escapeHtml(variant.compare_at_price || '')}"></td>
+                        <td data-label="Stock" class="variant-stock-column"><input class="admin-input variant-stock-input" type="number" min="0" name="variants[${variantIndex}][stock_quantity]" data-variant-sync-field="stock_quantity" value="${escapeHtml(variant.stock_quantity ?? 0)}" required></td>
+                        <td data-label="Active"><label class="admin-toggle" title="${variant.is_active === false ? 'Activate variant' : 'Deactivate variant'}"><input type="hidden" name="variants[${variantIndex}][is_active]" value="0"><input class="admin-toggle__input" type="checkbox" name="variants[${variantIndex}][is_active]" data-variant-sync-field="is_active" value="1" ${variant.is_active === false ? '' : 'checked'}><span class="admin-toggle__track" aria-hidden="true"><span class="admin-toggle__thumb"></span></span><span class="sr-only">Active variant</span></label></td>
                         <td data-label="Advanced"><details><summary>Advanced</summary><div class="variant-advanced"><p class="admin-help">Optional. Use images here only when this exact variant must override its color gallery.</p><button type="button" class="admin-button admin-button--secondary" data-add-variant-image="${variantIndex}">Override Color Gallery</button><div class="admin-grid" data-variant-images-root="${variantIndex}">${buildVariantImages(variant, variantIndex) || '<div class="admin-help">Color gallery will be used.</div>'}</div><button type="button" class="admin-link" data-remove-variant="${variantIndex}">Remove variant</button></div></details></td>
                     </tr>`).join('')}</tbody></table></div>`;
 
+                const updateStateFromVariantField = (input, variantIndex) => {
+                    const field = input.dataset.variantSyncField;
+                    if (field.startsWith('plan-')) {
+                        const plan = state.plans[Number(input.dataset.planTotal)];
+                        plan.total_amount = input.value;
+                        if (plan.months === 3) state.variants[variantIndex].price = input.value;
+                        return;
+                    }
+
+                    state.variants[variantIndex][field] = input.type === 'checkbox' ? input.checked : input.value;
+                };
+
+                roots.variants.querySelectorAll('[data-variant-sync-field]').forEach((input) => {
+                    const mirror = () => {
+                        const sourceRow = input.closest('[data-variant-record]');
+                        const sourceIndex = Number(sourceRow.dataset.variantRecord);
+                        updateStateFromVariantField(input, sourceIndex);
+
+                        const selectedRows = [...roots.variants.querySelectorAll('[data-variant-sync-select]:checked')]
+                            .map((checkbox) => Number(checkbox.dataset.variantSyncSelect));
+                        if (selectedRows.length < 2 || !selectedRows.includes(sourceIndex)) return;
+
+                        selectedRows.filter((index) => index !== sourceIndex).forEach((targetIndex) => {
+                            const target = roots.variants.querySelector(`[data-variant-record="${targetIndex}"] [data-variant-sync-field="${input.dataset.variantSyncField}"]`);
+                            if (!target) return;
+                            if (input.type === 'checkbox') target.checked = input.checked;
+                            else target.value = input.value;
+                            updateStateFromVariantField(target, targetIndex);
+                        });
+                    };
+
+                    input.addEventListener(input.type === 'checkbox' ? 'change' : 'input', mirror);
+                });
                 roots.variants.querySelectorAll('[data-remove-variant]').forEach((button) => {
                     button.addEventListener('click', () => {
                         syncVariantInputs();

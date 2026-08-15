@@ -199,7 +199,6 @@ class ProductRequest extends FormRequest
             $this->validateOwnedRecords($validator);
             $this->validateVariants($validator);
             $this->validateInstallmentPlans($validator);
-            $this->validateVariantRetirement($validator);
         });
     }
 
@@ -353,34 +352,6 @@ class ProductRequest extends FormRequest
             if ($compareAt !== null && $compareAt !== '' && $price !== null && $price !== '' && (float) $compareAt < (float) $price) {
                 $validator->errors()->add("variants.{$variantIndex}.compare_at_price", 'Compare-at price must be greater than or equal to the selling price.');
             }
-        }
-    }
-
-    protected function validateVariantRetirement(Validator $validator): void
-    {
-        $product = $this->route('product');
-
-        if (! $product) {
-            return;
-        }
-
-        $submittedVariantIds = collect($this->input('variants', []))
-            ->pluck('id')
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->all();
-
-        $retiringVariants = $product->variants()
-            ->whereNotIn('id', $submittedVariantIds ?: [0])
-            ->where('stock_quantity', '>', 0)
-            ->pluck('sku')
-            ->all();
-
-        if ($retiringVariants !== [] && ! $this->boolean('confirm_variant_retirement')) {
-            $validator->errors()->add(
-                'confirm_variant_retirement',
-                'Confirm retiring existing stocked variants before removing their combinations: '.implode(', ', $retiringVariants).'.'
-            );
         }
     }
 
