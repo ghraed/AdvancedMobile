@@ -111,16 +111,17 @@ if (root) {
         resolve();
         purchase.onclick = async () => {
             if (!payload?.in_stock || !selectedPlan) return;
+            purchase.disabled = true;
             try {
-                preview = await request(data.previewUrl, { variant_id: payload.variant_id, plan_id: selectedPlan.id });
-                if (!modal || !modalProduct || !modalSummary || !modalSchedule) {
-                    throw new Error('Unable to open the purchase preview. Please refresh the page.');
-                }
-                modalProduct.textContent = preview.product;
-                modalSummary.textContent = `Due today: ${money(preview.amount_due_now)} · Total: ${money(preview.total_amount)}`;
-                modalSchedule.innerHTML = preview.future_installments.map((payment) => `<li>Payment ${payment.sequence}: ${payment.due_date} · ${money(payment.amount)}</li>`).join('');
-                modal.hidden = false;
-            } catch (error) { $('[data-status]').textContent = error.message; }
+                // Validate the chosen variant and plan once more on the server,
+                // then carry the selected device into the application form.
+                const result = await request(data.confirmUrl, { variant_id: payload.variant_id, plan_id: selectedPlan.id });
+                if (!result.application_url) throw new Error('Unable to continue to the installment application. Please try again.');
+                window.location.assign(result.application_url);
+            } catch (error) {
+                $('[data-status]').textContent = error.message;
+                paymentState();
+            }
         };
         closeModalButton?.addEventListener('click', () => { if (modal) modal.hidden = true; });
         confirmPurchaseButton?.addEventListener('click', async () => {
@@ -135,6 +136,13 @@ if (root) {
                 if (modalStatus) modalStatus.textContent = error.message;
                 confirmPurchaseButton.disabled = false;
             }
+        });
+
+        // Browsers can restore this page from their back/forward cache after a
+        // redirect. Reset controls that were disabled while navigation began.
+        window.addEventListener('pageshow', () => {
+            confirmPurchaseButton && (confirmPurchaseButton.disabled = false);
+            paymentState();
         });
     } catch (error) {
         $('[data-status]').textContent = 'Unable to load product options. Please refresh the page.';

@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductOption;
 use App\Models\ProductVariant;
 use App\Services\InstallmentApplicationCalculator;
+use App\Services\CategoryMenuService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -20,7 +21,7 @@ class InstallmentApplicationController extends Controller
         return view('installments.landing');
     }
 
-    public function create(Request $request)
+    public function create(Request $request, CategoryMenuService $categoryMenuService)
     {
         $products = Product::query()->publiclyAvailable()->whereHas('variants', fn ($q) => $q->available())->with(['category', 'variants' => fn ($q) => $q->available()->with('optionValues.productOption')])->get();
 
@@ -36,7 +37,12 @@ class InstallmentApplicationController extends Controller
             $preselected = [];
         }
 
-        return view('installments.create', ['products' => $products, 'durations' => array_keys(config('installments.durations')), 'preselected' => $preselected]);
+        return view('installments.create', [
+            'products' => $products,
+            'durations' => array_keys(config('installments.durations')),
+            'preselected' => $preselected,
+            'menuCategories' => $categoryMenuService->visibleRootCategories(),
+        ]);
     }
 
     public function quote(Request $request, InstallmentApplicationCalculator $calculator)

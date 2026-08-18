@@ -10,8 +10,11 @@
     <div class="pm-site-layout">
       <x-public.desktop-sidebar :categories="$menuCategories" />
       <main class="min-w-0">
-        <p class="text-xs font-extrabold uppercase tracking-[.14em] text-[var(--pm-primary)]">{{ $currentCategory ? 'Category' : ($searchTerm !== '' ? 'Search results' : 'Catalog') }}</p>
-        <h1 class="mt-2 text-4xl font-black tracking-[-.04em] text-slate-950">{{ $currentCategory?->name ?? ($searchTerm !== '' ? 'Results for “'.$searchTerm.'”' : 'All products') }}</h1>
+        <header class="flex items-end gap-4">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-[0_12px_24px_rgba(37,99,235,.22)]"><span class="material-symbols-outlined">{{ $currentCategory ? ($currentCategory->slug === 'smartphones' ? 'smartphone' : 'category') : ($searchTerm !== '' ? 'search' : 'storefront') }}</span></span>
+            <div><p class="text-[11px] font-extrabold uppercase tracking-[.16em] text-[var(--pm-primary)]">{{ $currentCategory ? 'Browse category' : ($searchTerm !== '' ? 'Search results' : 'Explore the catalog') }}</p>
+            <h1 class="mt-1 text-4xl font-black tracking-[-.05em] text-slate-950 sm:text-5xl">{{ $currentCategory?->name ?? ($searchTerm !== '' ? 'Results for “'.$searchTerm.'”' : 'All products') }}</h1></div>
+        </header>
         @if ($currentCategory?->description || $currentCategory?->image)
             <div class="mt-5 flex gap-4 rounded-[22px] border border-[var(--pm-border)] bg-white p-4 shadow-sm">
                 @if ($currentCategory->image)<img src="{{ asset('storage/'.$currentCategory->image) }}" alt="" class="h-20 w-20 rounded-xl object-cover">@endif
