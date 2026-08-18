@@ -125,8 +125,16 @@ if (root) {
         closeModalButton?.addEventListener('click', () => { if (modal) modal.hidden = true; });
         confirmPurchaseButton?.addEventListener('click', async () => {
             if (!preview) return;
-            const result = await request(data.confirmUrl, { variant_id: preview.variant_id, plan_id: preview.plan_id, return_url: window.location.pathname });
-            window.location.assign(result.auth_url || result.checkout_url);
+            confirmPurchaseButton.disabled = true;
+            try {
+                const result = await request(data.confirmUrl, { variant_id: preview.variant_id, plan_id: preview.plan_id });
+                if (!result.application_url) throw new Error('Unable to continue to the installment application. Please try again.');
+                window.location.assign(result.application_url);
+            } catch (error) {
+                const modalStatus = modal?.querySelector('[data-modal-status]');
+                if (modalStatus) modalStatus.textContent = error.message;
+                confirmPurchaseButton.disabled = false;
+            }
         });
     } catch (error) {
         $('[data-status]').textContent = 'Unable to load product options. Please refresh the page.';

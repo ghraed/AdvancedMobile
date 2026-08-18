@@ -9,7 +9,6 @@ use App\Models\ProductOption;
 use App\Models\ProductVariant;
 use App\Services\CategoryMenuService;
 use App\Services\InstallmentPlanService;
-use App\Services\PendingPurchaseService;
 use App\Services\ProductImageResolver;
 use Carbon\CarbonImmutable;
 use DomainException;
@@ -22,7 +21,6 @@ class EliteMobileMarketplaceController extends Controller
     public function __construct(
         protected CategoryMenuService $categoryMenuService,
         protected InstallmentPlanService $installmentPlanService,
-        protected PendingPurchaseService $pendingPurchases,
         protected ProductImageResolver $productImageResolver,
     ) {}
 
@@ -95,18 +93,16 @@ class EliteMobileMarketplaceController extends Controller
             // Re-run the exact server lookup immediately before confirmation.
             $preview = $this->purchasePreview($request, $product);
 
-            $token = $this->pendingPurchases->create($product, $preview, $request->input('return_url'));
-            $request->session()->put(PendingPurchaseService::SESSION_KEY, $token);
-
-            if (! $request->user()) {
-                return response()->json([
-                    'confirmed' => true, 'requires_auth' => true,
-                    'message' => 'Sign in or create an account to continue securely to checkout.',
-                    'auth_url' => route('customer.login'), 'preview' => $preview,
-                ]);
-            }
-
-            return response()->json(['confirmed' => true, 'message' => 'Your installment selection is still available.', 'checkout_url' => route('checkout.show'), 'preview' => $preview]);
+            return response()->json([
+                'confirmed' => true,
+                'message' => 'Continue your installment application by providing your details and documents.',
+                'application_url' => route('installments.create', [
+                    'product_id' => $product->id,
+                    'variant_id' => $preview['variant_id'],
+                    'installment_months' => $preview['installment_months'],
+                ]),
+                'preview' => $preview,
+            ]);
         } catch (DomainException $exception) {
             return response()->json(['confirmed' => false, 'message' => $exception->getMessage(), 'changed' => true], 422);
         }
@@ -184,7 +180,7 @@ class EliteMobileMarketplaceController extends Controller
         $calculated = $this->installmentPlanService->previewFromPayload($plan->toArray(), (float) $variant->price, CarbonImmutable::now());
         $options = $variant->optionValues->mapWithKeys(fn ($value) => [$value->productOption?->slug => $value->display_name ?: $value->name]);
 
-        return ['product' => $product->name, 'variant_id' => $variant->id, 'option_value_ids' => $variant->optionValues->pluck('id')->sort()->values()->all(), 'variant_price' => $calculated['price'], 'storage' => $options->get('storage'), 'color' => $options->get('color'), 'plan_id' => $plan->id] + $calculated;
+        return ['product' => $product->name, 'variant_id' => $variant->id, 'option_value_ids' => $variant->optionValues->pluck('id')->sort()->values()->all(), 'variant_price' => $calculated['price'], 'storage' => $options->get('storage'), 'color' => $options->get('color'), 'plan_id' => $plan->id, 'installment_months' => $plan->number_of_payments] + $calculated;
     }
 
     // Legacy public URLs now use the database-backed catalog instead of demo fixtures.

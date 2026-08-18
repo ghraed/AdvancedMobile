@@ -7,7 +7,7 @@
     ];
 @endphp
 
-<nav class="pm-bottom-nav">
+{{-- <nav class="pm-bottom-nav">
     @foreach ($tabs as $tab)
         @php
             $isActive = ($activeTab ?? 'home') === $tab['key'];
@@ -20,4 +20,4 @@
             <span>{{ $tab['label'] }}</span>
         </a>
     @endforeach
-</nav>
+</nav> --}}

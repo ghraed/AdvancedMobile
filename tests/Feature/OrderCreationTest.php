@@ -13,6 +13,8 @@ use App\Models\ProductOptionValue;
 use App\Models\ProductVariant;
 use App\Models\User;
 use App\Services\OrderCreationService;
+use App\Services\InstallmentPlanService;
+use App\Services\PendingPurchaseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use RuntimeException;
@@ -94,9 +96,17 @@ class OrderCreationTest extends TestCase
 
     private function savePurchase(Product $product, ProductVariant $variant, InstallmentPlan $plan, User $user): string
     {
-        $this->postJson(route('products.confirm-purchase', $product), ['variant_id' => $variant->id, 'plan_id' => $plan->id]);
-        $token = session('pending_purchase_token');
+        $calculation = app(InstallmentPlanService::class)->previewFromPayload($plan->toArray(), (float) $variant->price);
+        $token = app(PendingPurchaseService::class)->create($product, [
+            'variant_id' => $variant->id,
+            'option_value_ids' => $variant->optionValues->pluck('id')->sort()->values()->all(),
+            'plan_id' => $plan->id,
+            'amount_due_now' => $calculation['amount_due_now'],
+            'total_amount' => $calculation['total_amount'],
+        ]);
         PendingPurchaseSession::firstOrFail()->update(['user_id' => $user->id]);
+        $this->withSession([PendingPurchaseService::SESSION_KEY => $token]);
+
         return $token;
     }
 

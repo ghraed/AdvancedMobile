@@ -24,7 +24,19 @@ class InstallmentApplicationController extends Controller
     {
         $products = Product::query()->publiclyAvailable()->whereHas('variants', fn ($q) => $q->available())->with(['category', 'variants' => fn ($q) => $q->available()->with('optionValues.productOption')])->get();
 
-        return view('installments.create', ['products' => $products, 'durations' => array_keys(config('installments.durations'))]);
+        $preselected = $request->validate([
+            'product_id' => ['nullable', 'integer'],
+            'variant_id' => ['nullable', 'integer'],
+            'installment_months' => ['nullable', 'integer', 'in:3,6,9'],
+        ]);
+
+        if (isset($preselected['product_id'], $preselected['variant_id']) && ! $products
+            ->firstWhere('id', $preselected['product_id'])?->variants
+            ->contains('id', $preselected['variant_id'])) {
+            $preselected = [];
+        }
+
+        return view('installments.create', ['products' => $products, 'durations' => array_keys(config('installments.durations')), 'preselected' => $preselected]);
     }
 
     public function quote(Request $request, InstallmentApplicationCalculator $calculator)
