@@ -27,7 +27,7 @@ class InstallmentApplicationController extends Controller
         } if ($request->filled('to')) {
             $query->whereDate('created_at', '<=', $request->to);
         } $sort = in_array($request->get('sort'), ['created_at', 'application_number', 'status']) ? $request->get('sort') : 'created_at';
-        $apps = $query->latest($sort)->paginate(20)->withQueryString();
+        $apps = $query->withCount('documents')->latest($sort)->paginate(20)->withQueryString();
 
         return view('admin.installment-applications.index', compact('apps'));
     }

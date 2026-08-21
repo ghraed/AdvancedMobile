@@ -9,6 +9,7 @@ use App\Models\ProductOptionValue;
 use App\Models\ProductVariant;
 use App\Services\InstallmentCalculatorService;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -117,6 +118,12 @@ class ProductRequest extends FormRequest
     {
         $payload = $this->all();
 
+        // Validate the same normalized slug that will be persisted. Without this,
+        // an empty slug is generated later by the model and can bypass the unique rule.
+        $payload['slug'] = Str::slug((string) (filled($payload['slug'] ?? null)
+            ? $payload['slug']
+            : ($payload['name'] ?? '')));
+
         if (($payload['specifications'] ?? null) !== null && $this->specificationsUseLegacyKeyValueShape($payload['specifications'])) {
             $payload['specifications'] = collect($payload['specifications'])
                 ->map(fn ($value, $key) => [
@@ -199,7 +206,45 @@ class ProductRequest extends FormRequest
             $this->validateOwnedRecords($validator);
             $this->validateVariants($validator);
             $this->validateInstallmentPlans($validator);
+
+            if ($validator->errors()->isNotEmpty()) {
+                $this->replace($this->preserveUploadedImagesForRetry($this->all()));
+            }
         });
+    }
+
+    /** Store selected images temporarily so a validation redirect can restore their previews. */
+    protected function preserveUploadedImagesForRetry(array $payload): array
+    {
+        $draftId = $this->session()->get('product_form_draft_id') ?? (string) Str::uuid();
+        $this->session()->put('product_form_draft_id', $draftId);
+        $store = fn (mixed $file): ?string => $file instanceof UploadedFile && $file->isValid()
+            ? $file->store("product-drafts/{$draftId}", 'public')
+            : null;
+
+        foreach ($this->file('product_images', []) as $imageIndex => $image) {
+            if ($path = $store($image['upload'] ?? null)) {
+                $payload['product_images'][$imageIndex]['image_path'] = $path;
+            }
+        }
+
+        foreach ($this->file('color_images', []) as $galleryIndex => $gallery) {
+            foreach ($gallery['images'] ?? [] as $imageIndex => $image) {
+                if ($path = $store($image['upload'] ?? null)) {
+                    $payload['color_images'][$galleryIndex]['images'][$imageIndex]['image_path'] = $path;
+                }
+            }
+        }
+
+        foreach ($this->file('variants', []) as $variantIndex => $variant) {
+            foreach ($variant['images'] ?? [] as $imageIndex => $image) {
+                if ($path = $store($image['upload'] ?? null)) {
+                    $payload['variants'][$variantIndex]['images'][$imageIndex]['image_path'] = $path;
+                }
+            }
+        }
+
+        return $payload;
     }
 
     protected function validateSpecifications(Validator $validator): void

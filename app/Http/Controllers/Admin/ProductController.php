@@ -110,6 +110,7 @@ class ProductController extends Controller
     public function store(ProductRequest $request): RedirectResponse
     {
         $product = $this->productCatalogService->save(new Product, $request->validated());
+        $request->session()->forget('product_form_draft_id');
 
         return redirect()
             ->route('admin.products.edit', $product)
@@ -133,6 +134,7 @@ class ProductController extends Controller
     public function update(ProductRequest $request, Product $product): RedirectResponse
     {
         $this->productCatalogService->save($product, $request->validated());
+        $request->session()->forget('product_form_draft_id');
 
         return redirect()
             ->route('admin.products.edit', $product)
@@ -232,9 +234,9 @@ class ProductController extends Controller
                 ]);
         }
 
-        $product->delete();
+        $this->productCatalogService->delete($product);
 
-        return redirect()->route('admin.products.index')->with('status', 'Product deleted.');
+        return redirect()->route('admin.products.index')->with('status', 'Product and its catalog data deleted permanently.');
     }
 
     protected function formData(Product $product): array

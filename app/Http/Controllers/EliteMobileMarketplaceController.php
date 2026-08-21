@@ -27,7 +27,10 @@ class EliteMobileMarketplaceController extends Controller
     public function home(): View
     {
         return view('elite-mobile-marketplace.home', $this->storefrontData(
-            Product::query()->publiclyAvailable()->with($this->productRelations())->latest('published_at')->limit(8)->get()
+            Product::query()->publiclyAvailable()->with($this->productRelations())
+                ->orderByRaw('COALESCE(published_at, created_at) DESC')
+                ->limit(8)
+                ->get()
         ));
     }
 
@@ -269,7 +272,7 @@ class EliteMobileMarketplaceController extends Controller
             'price_desc' => $query->orderByRaw('(select max(price) from product_variants where product_variants.product_id = products.id and is_active = 1 and stock_quantity > 0) desc'),
             'installment_asc' => $query->orderByRaw('(select min(installment_amount) from installment_plans where installment_plans.product_id = products.id and is_active = 1) asc'),
             'name_asc' => $query->orderBy('name'),
-            default => $query->latest('published_at'),
+            default => $query->orderByRaw('COALESCE(published_at, created_at) DESC'),
         };
 
         $products = $query->with($this->productRelations())->paginate(18)->withQueryString();

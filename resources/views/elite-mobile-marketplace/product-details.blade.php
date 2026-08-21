@@ -15,6 +15,7 @@
     $initialIds = $initial?->optionValues->pluck('id')->sort()->values() ?? collect();
     $fallbackImages = $catalogProduct->images->whereNull('product_option_value_id')->map(fn ($image) => ['url' => $imageUrl($image), 'alt' => $image->alt_text ?: $catalogProduct->name])->values();
     $productData = [
+        'productId' => $catalogProduct->id,
         'variants' => $variantData,
         'storageValues' => $storageValues->map(fn ($value) => ['id' => $value->id, 'name' => $value->display_name ?: $value->name])->values(),
         'colorValues' => $colorValues->map(fn ($value) => ['id' => $value->id, 'name' => $value->display_name ?: $value->name, 'hex' => $value->hex_value, 'image' => $value->swatch_image ? $imageUrl((object) ['image_path' => $value->swatch_image]) : null])->values(),
@@ -27,6 +28,7 @@
         'resolveUrl' => route('products.resolve-variant', $catalogProduct, false),
         'previewUrl' => route('products.purchase-preview', $catalogProduct, false),
         'confirmUrl' => route('products.confirm-purchase', $catalogProduct, false),
+        'applicationUrl' => route('installments.create', [], false),
     ];
     $specifications = collect($catalogProduct->specifications ?? []);
 @endphp

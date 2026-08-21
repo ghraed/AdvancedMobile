@@ -37,7 +37,7 @@ if (root) {
             if (!response.ok) throw new Error(result.message || 'The selection changed. Please try again.');
             return result;
         };
-        const paymentState = () => { purchase.disabled = !(payload?.in_stock && selectedPlan); };
+        const paymentState = () => { purchase.disabled = !payload?.in_stock; };
         const renderOptions = () => {
             if (storage) storage.innerHTML = data.storageValues.map((value) => {
                 const active = selected.storage === value.id;
@@ -110,9 +110,16 @@ if (root) {
         if (data.initialPayload) applyPayload(data.initialPayload);
         resolve();
         purchase.onclick = async () => {
-            if (!payload?.in_stock || !selectedPlan) return;
+            if (!payload?.in_stock) return;
             purchase.disabled = true;
             try {
+                if (!selectedPlan) {
+                    const applicationUrl = new URL(data.applicationUrl, window.location.origin);
+                    applicationUrl.searchParams.set('product_id', data.productId);
+                    applicationUrl.searchParams.set('variant_id', payload.variant_id);
+                    window.location.assign(applicationUrl);
+                    return;
+                }
                 // Validate the chosen variant and plan once more on the server,
                 // then carry the selected device into the application form.
                 const result = await request(data.confirmUrl, { variant_id: payload.variant_id, plan_id: selectedPlan.id });

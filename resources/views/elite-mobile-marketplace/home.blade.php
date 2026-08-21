@@ -12,7 +12,7 @@
         <main class="min-w-0">
             <section aria-labelledby="featured-products">
                 <div class="pm-section-head">
-                    <div class="flex flex-wrap gap-2" style='margin-top: 0;'><a href="{{ route('catalog.index') }}" class="rounded-full border border-slate-950 bg-slate-950 px-4 py-2 text-sm font-bold text-white">All</a>@foreach($menuCategories as $category)<a href="{{ route('categories.show', $category) }}" class="rounded-full border border-[var(--pm-border)] bg-white px-4 py-2 text-sm font-bold text-slate-700">{{ $category->name }}</a>@endforeach</div>
+                    <nav aria-label="Browse categories" class="-mx-1 flex w-full snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-2 hide-scrollbar"><a href="{{ route('catalog.index') }}" class="shrink-0 snap-start rounded-full border border-slate-950 bg-slate-950 px-4 py-2 text-sm font-bold text-white">All</a>@foreach($menuCategories as $category)<a href="{{ route('categories.show', $category) }}" class="shrink-0 snap-start rounded-full border border-[var(--pm-border)] bg-white px-4 py-2 text-sm font-bold text-slate-700">{{ $category->name }}</a>@endforeach</nav>
                 </div>
                 @include('elite-mobile-marketplace.partials.product-grid', ['products' => $products])
             </section>

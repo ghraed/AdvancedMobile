@@ -5,6 +5,9 @@
 @section('content')
     <div class="admin-grid admin-grid-2">
         <section class="admin-card">
+            @if (! $application->user_id)
+                <p class="mb-5 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800">Guest application — submitted without an account.</p>
+            @endif
             <h3 class="admin-card__title">Customer</h3>
             <p>
                 {{ $application->first_name }} {{ $application->last_name }}<br>

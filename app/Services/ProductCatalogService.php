@@ -55,6 +55,31 @@ class ProductCatalogService
         return $this->variantRetirementWarnings;
     }
 
+    /** Permanently remove a catalog product, its dependent records, and uploaded assets. */
+    public function delete(Product $product): void
+    {
+        $assetPaths = DB::transaction(function () use ($product): array {
+            $productId = $product->id;
+            $imagePaths = ProductImage::query()
+                ->where('product_id', $productId)
+                ->pluck('image_path');
+            $swatchPaths = ProductOptionValue::query()
+                ->whereHas('productOption', fn ($query) => $query->where('product_id', $productId))
+                ->pluck('swatch_image');
+
+            $product->forceDelete();
+
+            return $imagePaths
+                ->merge($swatchPaths)
+                ->filter(fn ($path) => filled($path))
+                ->unique()
+                ->values()
+                ->all();
+        });
+
+        Storage::disk('public')->delete($assetPaths);
+    }
+
     public function duplicate(Product $product): Product
     {
         return DB::transaction(function () use ($product) {
@@ -594,7 +619,18 @@ class ProductCatalogService
     protected function storeImageUpload(?UploadedFile $file, ?string $existingPath, int $productId): string
     {
         if ($file instanceof UploadedFile) {
+            if (Str::startsWith((string) $existingPath, 'product-drafts/')) {
+                Storage::disk('public')->delete($existingPath);
+            }
+
             return $file->store("products/{$productId}", 'public');
+        }
+
+        if (Str::startsWith((string) $existingPath, 'product-drafts/')) {
+            $destination = "products/{$productId}/".basename($existingPath);
+            Storage::disk('public')->move($existingPath, $destination);
+
+            return $destination;
         }
 
         return (string) $existingPath;
@@ -603,7 +639,18 @@ class ProductCatalogService
     protected function storeOptionSwatch(?UploadedFile $file, ?string $existingPath, int $productId): ?string
     {
         if ($file instanceof UploadedFile) {
+            if (Str::startsWith((string) $existingPath, 'product-drafts/')) {
+                Storage::disk('public')->delete($existingPath);
+            }
+
             return $file->store("products/{$productId}/swatches", 'public');
+        }
+
+        if (Str::startsWith((string) $existingPath, 'product-drafts/')) {
+            $destination = "products/{$productId}/swatches/".basename($existingPath);
+            Storage::disk('public')->move($existingPath, $destination);
+
+            return $destination;
         }
 
         return $existingPath;

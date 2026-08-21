@@ -69,6 +69,7 @@
             'id' => $variant->id,
             'client_key' => (string) $variant->id,
             'sku' => $variant->sku,
+            'sku_auto' => true,
             'price' => $variant->price,
             'compare_at_price' => $variant->compare_at_price,
             'stock_quantity' => $variant->stock_quantity,
@@ -381,6 +382,19 @@
                 .replaceAll('<', '&lt;')
                 .replaceAll('>', '&gt;')
                 .replaceAll('"', '&quot;');
+            const colorHex = (value) => {
+                const probe = document.createElement('span');
+                probe.style.color = String(value || '');
+                if (!probe.style.color) return null;
+
+                document.body.appendChild(probe);
+                const channels = window.getComputedStyle(probe).color.match(/\d+/g);
+                probe.remove();
+
+                return channels?.length >= 3
+                    ? `#${channels.slice(0, 3).map((channel) => Number(channel).toString(16).padStart(2, '0')).join('')}`.toUpperCase()
+                    : null;
+            };
             const money = (value) => Number(value || 0).toFixed(2);
             const headline = (value) => String(value || '').replaceAll('_', ' ').replace(/\b\w/g, (match) => match.toUpperCase());
             const activeOptionGroups = () => optionDefinitions.map((definition, optionIndex) => {
@@ -413,6 +427,7 @@
             state.variants = state.variants.map((variant) => ({
                 ...variant,
                 client_key: variant.client_key || String(variant.id || createVariantKey()),
+                sku_auto: variant.sku_auto !== false,
             }));
 
             const buildPreview = (path) => path
@@ -436,8 +451,13 @@
                                 </div>
                                 ${definition.supports_hex ? `
                                     <div class="admin-field">
-                                        <label class="admin-label">Hex Value</label>
-                                        <input class="admin-input" name="product_options[${optionIndex}][values][${valueIndex}][hex_value]" value="${escapeHtml(value.hex_value || '')}" placeholder="#000000">
+                                        <label class="admin-label">Color</label>
+                                        <div class="admin-inline" style="gap:8px; align-items:center;">
+                                            <input type="color" value="${escapeHtml(colorHex(value.hex_value) || '#000000')}" data-color-picker>
+                                            <input class="admin-input" value="${escapeHtml(value.hex_value || '')}" placeholder="#2563EB or blue" data-color-value>
+                                            <input type="hidden" name="product_options[${optionIndex}][values][${valueIndex}][hex_value]" value="${escapeHtml(colorHex(value.hex_value) || '')}" data-color-hex>
+                                        </div>
+                                        <p class="admin-help" style="margin:6px 0 0;">Choose a color, or enter a hex code or color name such as blue or gray.</p>
                                     </div>
                                 ` : ''}
                                 ${definition.supports_swatch ? `
@@ -512,8 +532,28 @@
                 roots.productOptions.querySelectorAll('input[name*="[values]"][name$="[name]"]').forEach((input) => {
                     input.addEventListener('change', () => {
                         syncProductOptionValues();
+                        syncVariantOptionNamesFromOptions();
+                        autoFillVariantSkus();
                         buildColorImages();
+                        buildVariants();
                     });
+                });
+
+                roots.productOptions.querySelectorAll('[data-color-value]').forEach((input) => {
+                    const field = input.closest('.admin-field');
+                    const picker = field?.querySelector('[data-color-picker]');
+                    const hidden = field?.querySelector('[data-color-hex]');
+
+                    const updateColor = (value) => {
+                        const hex = colorHex(value);
+                        if (!hex) return;
+                        input.value = hex;
+                        picker.value = hex;
+                        hidden.value = hex;
+                    };
+
+                    input.addEventListener('change', () => updateColor(input.value));
+                    picker?.addEventListener('input', () => updateColor(picker.value));
                 });
             };
 
@@ -679,6 +719,39 @@
 
             const variantLabel = (variant) => variant.option_values.map((value) => value.name).join(' / ') || 'Variant';
 
+            const skuPart = (value) => String(value || '')
+                .normalize('NFKD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase()
+                .replace(/[^A-Z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+            const suggestedSku = (variant) => {
+                const productName = document.getElementById('name')?.value;
+                const storage = variant.option_values?.find((value) => value.option_slug === 'storage')?.name;
+                const color = variant.option_values?.find((value) => value.option_slug === 'color')?.name;
+
+                if (!productName || !storage || !color) return '';
+
+                return [productName, storage, color].map(skuPart).filter(Boolean).join('-');
+            };
+
+            const autoFillVariantSkus = () => {
+                state.variants.forEach((variant, variantIndex) => {
+                    if (variant.sku_auto === false) return;
+
+                    const sku = suggestedSku(variant);
+                    if (!sku) return;
+
+                    variant.sku = sku;
+                    const input = document.querySelector(`input[name="variants[${variantIndex}][sku]"]`);
+                    if (input) input.value = sku;
+                });
+            };
+
+            const planMatchesVariant = (plan, variant) => plan.variant_key === variant.client_key
+                || (Boolean(variant.id) && Boolean(plan.product_variant_id) && String(plan.product_variant_id) === String(variant.id));
+
             const syncVariantInputs = () => {
                 state.variants.forEach((variant, variantIndex) => {
                     const value = (field) => document.querySelector(`input[name="variants[${variantIndex}][${field}]"]`)?.value;
@@ -725,7 +798,7 @@
             `).join('');
 
             const installmentCell = (variant, term) => {
-                const index = state.plans.findIndex((plan) => plan.months === term && (plan.variant_key === variant.client_key || String(plan.product_variant_id || '') === String(variant.id || '')));
+                const index = state.plans.findIndex((plan) => plan.months === term && planMatchesVariant(plan, variant));
                 const plan = state.plans[index];
 
                 return `<td data-label="${term} Payments Total"><input type="hidden" name="installment_plans[${index}][id]" value="${plan.id || ''}"><input type="hidden" name="installment_plans[${index}][scope]" value="variant"><input type="hidden" name="installment_plans[${index}][variant_key]" value="${escapeHtml(variant.client_key || '')}"><input type="hidden" name="installment_plans[${index}][product_variant_id]" value="${escapeHtml(variant.id || '')}"><input type="hidden" name="installment_plans[${index}][months]" value="${term}"><input type="hidden" name="installment_plans[${index}][is_active]" value="1"><input class="admin-input" type="number" step="0.01" min="0.01" required name="installment_plans[${index}][total_amount]" data-plan-total="${index}" data-variant-sync-field="plan-${term}" value="${escapeHtml(plan.total_amount || '')}" aria-label="${term} payments total for ${escapeHtml(variantLabel(variant))}"></td>`;
@@ -763,6 +836,7 @@
                     }
 
                     state.variants[variantIndex][field] = input.type === 'checkbox' ? input.checked : input.value;
+                    if (field === 'sku') state.variants[variantIndex].sku_auto = false;
                 };
 
                 roots.variants.querySelectorAll('[data-variant-sync-field]').forEach((input) => {
@@ -948,6 +1022,7 @@
                         id: null,
                         client_key: createVariantKey(),
                         sku: '',
+                        sku_auto: true,
                         price: '',
                         compare_at_price: '',
                         stock_quantity: 0,
@@ -965,13 +1040,14 @@
 
                 state.variants = [...rebuiltVariants, ...retainedLegacyVariants];
 
+                autoFillVariantSkus();
                 buildVariants();
             };
 
             const syncPlanVariantTargets = () => {
                 state.plans = state.plans.filter((plan) => plan.scope === 'variant');
                 state.variants.forEach((variant) => paymentTerms.forEach((months) => {
-                    const plan = state.plans.find((entry) => entry.months === months && (entry.variant_key === variant.client_key || String(entry.product_variant_id || '') === String(variant.id || '')));
+                    const plan = state.plans.find((entry) => entry.months === months && planMatchesVariant(entry, variant));
                     if (plan) {
                         plan.variant_key = variant.client_key;
                         plan.product_variant_id = variant.id || null;
@@ -1084,6 +1160,7 @@
             });
 
             document.getElementById('generate-variants')?.addEventListener('click', generateVariants);
+            document.getElementById('name')?.addEventListener('input', autoFillVariantSkus);
             document.querySelector('form[data-loading-form]')?.addEventListener('submit', () => {
                 syncProductOptionValues();
                 syncColorImageInputs();
