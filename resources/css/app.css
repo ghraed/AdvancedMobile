@@ -768,3 +768,272 @@ html[dir='rtl'] .pm-header, html[dir='rtl'] .pm-site-layout { direction: rtl; }
     .pm-finance-process__steps i { margin-block: 2rem; }
     .pm-support-float { right: .8rem; max-width: calc(100vw - 1.6rem); }
 }
+
+/* Refined native selects: accessible, consistent, and touch friendly */
+.pm-page select:not(.admin-select):not([multiple]) {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 3rem;
+    border: 1px solid #cec5b4;
+    border-radius: 0.85rem;
+    padding: 0.72rem 2.85rem 0.72rem 0.9rem;
+    color: var(--pm-text);
+    background-color: rgba(255, 252, 245, 0.96);
+    background-image:
+        linear-gradient(45deg, transparent 50%, #607460 50%),
+        linear-gradient(135deg, #607460 50%, transparent 50%),
+        linear-gradient(to right, rgba(206, 197, 180, 0.72), rgba(206, 197, 180, 0.72));
+    background-position:
+        calc(100% - 1.18rem) calc(50% - 0.1rem),
+        calc(100% - 0.88rem) calc(50% - 0.1rem),
+        calc(100% - 2.15rem) 50%;
+    background-size: 0.32rem 0.32rem, 0.32rem 0.32rem, 1px 1.45rem;
+    background-repeat: no-repeat;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 4px 14px rgba(48, 56, 47, 0.035);
+    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 650;
+    line-height: 1.25;
+    cursor: pointer;
+    outline: none;
+    transition:
+        border-color 180ms ease,
+        background-color 180ms ease,
+        background-position 180ms ease,
+        box-shadow 180ms ease,
+        transform 180ms ease;
+}
+
+.pm-page select:not(.admin-select):not([multiple]):hover:not(:disabled) {
+    border-color: #99aa94;
+    background-color: #fffdf7;
+    background-position:
+        calc(100% - 1.15rem) calc(50% + 0.02rem),
+        calc(100% - 0.85rem) calc(50% + 0.02rem),
+        calc(100% - 2.15rem) 50%;
+    box-shadow: inset 0 1px 0 #fff, 0 8px 20px rgba(59, 74, 60, 0.08);
+}
+
+.pm-page select:not(.admin-select):not([multiple]):focus,
+.pm-page select:not(.admin-select):not([multiple]):focus-visible {
+    border-color: var(--pm-primary);
+    background-color: #fffdf8;
+    box-shadow:
+        0 0 0 4px rgba(104, 127, 104, 0.14),
+        0 10px 26px rgba(59, 74, 60, 0.1);
+}
+
+.pm-page select:not(.admin-select):not([multiple]):active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.pm-page select:not(.admin-select):not([multiple]):disabled {
+    border-color: #ddd6c9;
+    color: #9c9588;
+    background-color: #eee9df;
+    cursor: not-allowed;
+    opacity: 0.78;
+}
+
+.pm-page select:not(.admin-select) option,
+.pm-page select:not(.admin-select) optgroup {
+    color: var(--pm-text);
+    background: #fffaf0;
+    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+}
+
+.pm-page select:not(.admin-select) option:checked {
+    color: #fffaf0;
+    background: var(--pm-primary);
+}
+
+.pm-page select.pm-locale-select:not([multiple]) {
+    width: auto;
+    min-width: 4.6rem;
+    min-height: 2.55rem;
+    border-radius: 999px;
+    padding-block: 0.5rem;
+    padding-inline-start: 0.85rem;
+    padding-inline-end: 2.45rem;
+    background-position:
+        calc(100% - 0.95rem) calc(50% - 0.1rem),
+        calc(100% - 0.68rem) calc(50% - 0.1rem),
+        calc(100% - 1.82rem) 50%;
+    background-size: 0.28rem 0.28rem, 0.28rem 0.28rem, 1px 1.15rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+html[dir='rtl'] .pm-page select:not(.admin-select):not([multiple]) {
+    padding-right: 0.9rem;
+    padding-left: 2.85rem;
+    background-position:
+        1.18rem calc(50% - 0.1rem),
+        0.88rem calc(50% - 0.1rem),
+        2.15rem 50%;
+}
+
+html[dir='rtl'] .pm-page select.pm-locale-select:not([multiple]) {
+    padding-right: 0.85rem;
+    padding-left: 2.45rem;
+    background-position:
+        0.95rem calc(50% - 0.1rem),
+        0.68rem calc(50% - 0.1rem),
+        1.82rem 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pm-page select:not(.admin-select) { transition: none; }
+}
+
+/* Floating-label form fields */
+.pm-page .pm-floating-field {
+    position: relative;
+    display: block;
+    min-width: 0;
+    margin-top: 1rem;
+    color: var(--pm-text-muted);
+    font-size: 1rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.pm-page .pm-floating-label {
+    position: absolute;
+    top: 50%;
+    right: 2.85rem;
+    left: 1rem;
+    z-index: 2;
+    overflow: hidden;
+    color: #777264;
+    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 650;
+    line-height: 1;
+    letter-spacing: 0;
+    text-overflow: ellipsis;
+    text-transform: none;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translateY(-50%);
+    transform-origin: left top;
+    transition: top 180ms ease, color 180ms ease, font-size 180ms ease, transform 180ms ease;
+}
+
+.pm-page .pm-floating-control {
+    display: block;
+    width: 100%;
+    min-height: 3.65rem;
+    margin: 0 !important;
+    border: 1px solid #cec5b4;
+    border-radius: 0.9rem;
+    padding: 1.35rem 1rem 0.38rem;
+    color: var(--pm-text);
+    background-color: rgba(255, 252, 245, 0.96);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88), 0 5px 16px rgba(48, 56, 47, 0.04);
+    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.87rem;
+    font-weight: 650;
+    line-height: 1.25;
+    outline: none;
+    transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.pm-page .pm-floating-field select.pm-floating-control:not([multiple]) {
+    min-height: 3.65rem;
+    padding-top: 1.35rem;
+    padding-right: 2.85rem;
+    padding-bottom: 0.38rem;
+    padding-left: 1rem;
+}
+
+.pm-page textarea.pm-floating-control {
+    min-height: 7.5rem;
+    resize: vertical;
+}
+
+.pm-page .pm-floating-control::placeholder {
+    color: transparent;
+    opacity: 0;
+    transition: color 150ms ease, opacity 150ms ease;
+}
+
+.pm-page .pm-floating-control:focus::placeholder {
+    color: #aaa294;
+    opacity: 1;
+    transition-delay: 100ms;
+}
+
+.pm-page .pm-floating-field:focus-within .pm-floating-label,
+.pm-page .pm-floating-field.is-filled .pm-floating-label {
+    top: 0;
+    color: var(--pm-primary);
+    font-size: 0.7rem;
+    font-weight: 750;
+    letter-spacing: 0.015em;
+    text-transform: none;
+    transform: translateY(calc(-100% - 0.42rem));
+}
+
+.pm-page .pm-floating-field.is-select.is-empty:not(:focus-within) select.pm-floating-control {
+    color: transparent;
+}
+
+.pm-page .pm-floating-field.is-select.is-empty select.pm-floating-control option {
+    color: var(--pm-text);
+}
+
+.pm-page .pm-floating-field:focus-within .pm-floating-control {
+    border-color: var(--pm-primary);
+    background-color: #fffdf8;
+    box-shadow: 0 0 0 4px rgba(104, 127, 104, 0.14), 0 12px 28px rgba(59, 74, 60, 0.1);
+}
+
+.pm-page .pm-floating-control:hover:not(:focus):not(:disabled) {
+    border-color: #9daf98;
+    background-color: #fffdf8;
+}
+
+.pm-page .pm-floating-control:user-invalid {
+    border-color: #b85b55;
+    box-shadow: 0 0 0 4px rgba(184, 91, 85, 0.1);
+}
+
+.pm-page .pm-floating-field:has(.pm-floating-control:user-invalid) .pm-floating-label {
+    color: #a3443f;
+}
+
+.pm-page .pm-floating-control:disabled {
+    color: #9a9488;
+    background-color: #ebe7dd;
+    cursor: not-allowed;
+}
+
+.pm-page .pm-floating-field > small {
+    position: static;
+    display: block;
+    margin-top: 0.4rem;
+    padding-inline: 0.3rem;
+    font-size: 0.68rem;
+    line-height: 1.4;
+}
+
+html[dir='rtl'] .pm-page .pm-floating-label {
+    right: 1rem;
+    left: 2.85rem;
+    transform-origin: right top;
+}
+
+html[dir='rtl'] .pm-page .pm-floating-field select.pm-floating-control:not([multiple]) {
+    padding-right: 1rem;
+    padding-left: 2.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pm-page .pm-floating-label,
+    .pm-page .pm-floating-control,
+    .pm-page .pm-floating-control::placeholder { transition: none; }
+}

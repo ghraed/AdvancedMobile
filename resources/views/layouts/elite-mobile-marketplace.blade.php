@@ -255,6 +255,76 @@
             })();
         </script>
 
+        <script>
+            (() => {
+                const selector = 'input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]), select:not([multiple]), textarea';
+                const isEligible = control => control?.matches(selector) && !control.closest('[data-search-overlay], .pm-header, .pm-product-page');
+
+                const sync = (field, control) => {
+                    const hasValue = String(control.value ?? '').trim() !== '';
+                    const isSelect = control.tagName === 'SELECT';
+                    field.classList.toggle('is-filled', hasValue);
+                    field.classList.toggle('is-select', isSelect);
+                    field.classList.toggle('is-empty', isSelect && !hasValue);
+                };
+
+                const activate = (field, control) => {
+                    if (!field || !control || control.dataset.floatingEnhanced) return;
+                    control.dataset.floatingEnhanced = 'true';
+                    control.classList.add('pm-floating-control');
+                    sync(field, control);
+                    control.addEventListener('input', () => sync(field, control));
+                    control.addEventListener('change', () => sync(field, control));
+                    control.addEventListener('animationstart', () => sync(field, control));
+                };
+
+                document.querySelectorAll('main form label').forEach(label => {
+                    if (label.classList.contains('sr-only') || label.matches('[data-upload-card] label') || label.querySelector('input[type="file"]')) return;
+
+                    let control = [...label.children].find(child => isEligible(child));
+                    if (control) {
+                        const textNodes = [...label.childNodes].filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+                        const caption = textNodes.map(node => node.textContent.trim()).join(' ');
+                        if (!caption) return;
+                        textNodes.forEach(node => node.remove());
+                        const floatingLabel = document.createElement('span');
+                        floatingLabel.className = 'pm-floating-label';
+                        floatingLabel.textContent = caption;
+                        label.insertBefore(floatingLabel, control);
+                        label.classList.add('pm-floating-field');
+                        activate(label, control);
+                        return;
+                    }
+
+                    control = label.nextElementSibling;
+                    if (!isEligible(control)) return;
+                    const field = document.createElement('div');
+                    field.className = 'pm-floating-field';
+                    if (!control.id) control.id = `floating-field-${Math.random().toString(36).slice(2, 9)}`;
+                    label.htmlFor = control.id;
+                    label.parentNode.insertBefore(field, label);
+                    field.append(label, control);
+                    label.classList.add('pm-floating-label');
+                    activate(field, control);
+                });
+
+                document.querySelectorAll('main form input[placeholder], main form textarea[placeholder]').forEach(control => {
+                    if (!isEligible(control) || control.dataset.floatingEnhanced || !control.placeholder.trim()) return;
+                    const field = document.createElement('div');
+                    const label = document.createElement('span');
+                    field.className = 'pm-floating-field';
+                    label.className = 'pm-floating-label';
+                    label.textContent = control.placeholder;
+                    if (!control.hasAttribute('aria-label')) control.setAttribute('aria-label', control.placeholder);
+                    control.parentNode.insertBefore(field, control);
+                    field.append(label, control);
+                    activate(field, control);
+                });
+
+                window.addEventListener('pageshow', () => document.querySelectorAll('[data-floating-enhanced]').forEach(control => sync(control.closest('.pm-floating-field'), control)));
+            })();
+        </script>
+
         @stack('scripts')
         <script>
             if ('serviceWorker' in navigator) {
