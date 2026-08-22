@@ -16,9 +16,11 @@ use Illuminate\Support\Str;
 
 class InstallmentApplicationController extends Controller
 {
-    public function landing()
+    public function landing(CategoryMenuService $categoryMenuService)
     {
-        return view('installments.landing');
+        return view('installments.landing', [
+            'menuCategories' => $categoryMenuService->visibleRootCategories(),
+        ]);
     }
 
     public function create(Request $request, CategoryMenuService $categoryMenuService)

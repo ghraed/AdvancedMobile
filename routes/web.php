@@ -10,6 +10,7 @@ use App\Http\Controllers\EliteMobileMarketplaceController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\InstallmentApplicationController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\Admin\InstallmentApplicationController as AdminInstallmentApplicationController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +19,8 @@ Route::get('/home', [EliteMobileMarketplaceController::class, 'home']);
 Route::get('/catalog', [EliteMobileMarketplaceController::class, 'catalog'])->name('catalog.index');
 Route::get('/categories/{category:slug}', [EliteMobileMarketplaceController::class, 'category'])->name('categories.show');
 Route::get('/search', [EliteMobileMarketplaceController::class, 'search'])->name('search');
+Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
+Route::get('/compare', [EliteMobileMarketplaceController::class, 'compare'])->name('products.compare');
 Route::get('/product-details', [EliteMobileMarketplaceController::class, 'productDetails']);
 Route::get('/products/{product:slug}', [EliteMobileMarketplaceController::class, 'showProduct'])->name('products.show');
 Route::post('/products/{product:slug}/resolve-variant', [EliteMobileMarketplaceController::class, 'resolveVariant'])->name('products.resolve-variant');

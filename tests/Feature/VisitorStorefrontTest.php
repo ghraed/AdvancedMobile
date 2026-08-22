@@ -104,4 +104,42 @@ class VisitorStorefrontTest extends TestCase
             ->assertOk()
             ->assertSeeText('Only 2 left');
     }
+
+    public function test_visitors_can_compare_available_phone_specifications(): void
+    {
+        $category = Category::factory()->create(['name' => 'Smartphones', 'is_active' => true]);
+        $first = Product::factory()->create(['category_id' => $category->id, 'name' => 'Compare One', 'specifications' => ['Display' => '6.1 OLED']]);
+        $second = Product::factory()->create(['category_id' => $category->id, 'name' => 'Compare Two', 'specifications' => ['Display' => '6.7 AMOLED']]);
+        ProductVariant::factory()->create(['product_id' => $first->id, 'stock_quantity' => 1, 'price' => 500]);
+        ProductVariant::factory()->create(['product_id' => $second->id, 'stock_quantity' => 1, 'price' => 700]);
+
+        $this->get(route('products.compare', ['products' => [$first->slug, $second->slug]]))
+            ->assertOk()
+            ->assertSeeText('Compare phone specifications')
+            ->assertSeeText($first->name)
+            ->assertSeeText($second->name)
+            ->assertSeeText('6.1 OLED')
+            ->assertSeeText('6.7 AMOLED');
+    }
+
+    public function test_storefront_includes_pwa_manifest_and_service_worker_registration(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('manifest.webmanifest', false)
+            ->assertSee('service-worker.js', false);
+    }
+
+    public function test_visitors_can_switch_the_storefront_to_arabic(): void
+    {
+        $this->from('/')
+            ->post(route('locale.update'), ['locale' => 'ar'])
+            ->assertRedirect('/');
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('lang="ar"', false)
+            ->assertSee('dir="rtl"', false)
+            ->assertSeeText('التقسيط');
+    }
 }

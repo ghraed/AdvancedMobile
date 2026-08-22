@@ -71,11 +71,13 @@ class ProductVariantSelectionTest extends TestCase
     public function test_product_page_includes_selectors_and_similar_product_suggestions(): void
     {
         [$product] = $this->productWithVariants();
+        config(['services.whatsapp.sales_support_number' => '+961 70 123 456']);
 
         $this->get(route('products.show', $product))->assertOk()
             ->assertSeeText('Storage')->assertSeeText('Color')->assertSeeText('Installment plans')
             ->assertSeeText('Continue to purchase')->assertSeeText('Similar products')
             ->assertSeeText('Share on WhatsApp')->assertSee('https://wa.me/?text=', false)
+            ->assertSeeText('WhatsApp sales & support')->assertSee('https://wa.me/96170123456', false)
             ->assertDontSee(config('app.url').'/products/'.$product->slug.'/resolve-variant', false);
     }
 

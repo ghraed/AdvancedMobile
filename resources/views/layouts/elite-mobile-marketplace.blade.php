@@ -1,14 +1,21 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="theme-color" content="#687f68">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+        <link rel="icon" href="{{ asset('icons/taqqsit-icon.svg') }}" type="image/svg+xml">
+        <link rel="apple-touch-icon" href="{{ asset('icons/taqqsit-icon.svg') }}">
         <title>@yield('title', 'Catalog')</title>
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
         @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
             @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -16,17 +23,17 @@
             <script src="https://cdn.tailwindcss.com"></script>
             <style>
                 :root {
-                    --pm-bg: #f6f8fc;
-                    --pm-surface: #ffffff;
-                    --pm-surface-soft: #edf2f7;
-                    --pm-surface-muted: #e2e8f0;
-                    --pm-border: #d6dde5;
-                    --pm-text: #0f172a;
-                    --pm-text-muted: #64748b;
-                    --pm-primary: #2563eb;
-                    --pm-primary-strong: #1d4ed8;
-                    --pm-secondary: #4f46e5;
-                    --pm-accent: #2563eb;
+                    --pm-bg: #f4efe4;
+                    --pm-surface: #fffaf0;
+                    --pm-surface-soft: #ebe4d5;
+                    --pm-surface-muted: #ddd4c2;
+                    --pm-border: #d8cebc;
+                    --pm-text: #263128;
+                    --pm-text-muted: #746f64;
+                    --pm-primary: #687f68;
+                    --pm-primary-strong: #435744;
+                    --pm-secondary: #86977c;
+                    --pm-accent: #728970;
                     --pm-danger: #dc2626;
                 }
 
@@ -38,9 +45,9 @@
                 .pm-page {
                     min-height: 100vh;
                     background:
-                        radial-gradient(circle at top left, rgba(43, 108, 176, 0.14), transparent 28%),
-                        radial-gradient(circle at top right, rgba(49, 151, 149, 0.12), transparent 22%),
-                        linear-gradient(180deg, #eef4fa 0%, #f7fafc 40%, #f5f8fb 100%);
+                        radial-gradient(circle at top left, rgba(134, 151, 124, 0.18), transparent 28%),
+                        radial-gradient(circle at top right, rgba(104, 127, 104, 0.12), transparent 22%),
+                        linear-gradient(180deg, #f4efe4 0%, #faf6ed 42%, #f2ecdf 100%);
                     color: var(--pm-text);
                 }
                 .pm-shell {
@@ -221,7 +228,8 @@
                     if (drawerHistoryOpen && !fromHistory) history.back();
                     drawerHistoryOpen = false;
                 };
-                document.querySelector('[data-category-open]')?.addEventListener('click', () => {
+                document.querySelector('[data-category-open]')?.addEventListener('click', event => {
+                    if (!drawer) { window.location.assign(event.currentTarget.dataset.catalogUrl); return; }
                     setOpen(drawer, true); drawer?.querySelector('[data-category-dialog]')?.focus();
                     if (!drawerHistoryOpen) { history.pushState({ categoryDrawer: true }, ''); drawerHistoryOpen = true; }
                 });
@@ -248,5 +256,10 @@
         </script>
 
         @stack('scripts')
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => navigator.serviceWorker.register('{{ asset('service-worker.js') }}'));
+            }
+        </script>
     </body>
 </html>

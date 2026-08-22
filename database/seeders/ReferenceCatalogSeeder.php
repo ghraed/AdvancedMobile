@@ -75,11 +75,13 @@ class ReferenceCatalogSeeder extends Seeder
             'name' => $name,
             'short_description' => $description,
             'description' => $description,
-            'specifications' => ['Connectivity' => '5G', 'SIM' => 'Dual SIM', 'Warranty' => '1 year'],
+            'specifications' => $this->specificationsFor($slug),
             'brand' => $brand,
             'status' => ProductStatus::Active,
             'is_featured' => true,
+            'is_trending' => in_array($slug, ['galaxy-s26-plus', 'pixel-air-10', 'onemax-ultra', 'fold-vision'], true),
             'published_at' => now()->subMinutes($index),
+            'offer_ends_at' => in_array($slug, ['galaxy-a57', 'galaxy-tab-lite'], true) ? now()->addDays(7) : null,
             'deleted_at' => null,
         ]);
         if ($product->trashed()) {
@@ -163,5 +165,21 @@ class ReferenceCatalogSeeder extends Seeder
                 ],
             );
         }
+    }
+
+    private function specificationsFor(string $slug): array
+    {
+        $specifications = [
+            'galaxy-a57' => ['Display' => '6.7-inch Super AMOLED', 'Processor' => 'Exynos 1580', 'Camera' => '50 MP triple camera', 'Battery' => '5,000 mAh', 'Connectivity' => '5G', 'SIM' => 'Dual SIM', 'Warranty' => '1 year'],
+            'galaxy-s26-plus' => ['Display' => '6.7-inch Dynamic AMOLED 2X', 'Processor' => 'Snapdragon 8 Elite', 'Camera' => '50 MP pro camera system', 'Battery' => '4,900 mAh', 'Connectivity' => '5G', 'SIM' => 'Dual SIM', 'Warranty' => '1 year'],
+            'nova-x-pro' => ['Display' => '6.8-inch OLED', 'Processor' => 'Nova X1 Pro', 'Camera' => '108 MP ultra-clear camera', 'Battery' => '5,200 mAh', 'Connectivity' => '5G', 'SIM' => 'Dual SIM', 'Warranty' => '1 year'],
+            'pixel-air-10' => ['Display' => '6.3-inch Actua OLED', 'Processor' => 'Tensor G5', 'Camera' => '50 MP AI camera', 'Battery' => '4,700 mAh', 'Connectivity' => '5G', 'SIM' => 'Dual SIM', 'Warranty' => '1 year'],
+            'tab-studio-12' => ['Display' => '12.4-inch 3K OLED', 'Processor' => 'Studio M3', 'Camera' => '13 MP rear camera', 'Battery' => '10,000 mAh', 'Connectivity' => 'Wi-Fi 6E', 'SIM' => 'Wi-Fi', 'Warranty' => '1 year'],
+            'galaxy-tab-lite' => ['Display' => '11-inch LCD', 'Processor' => 'Exynos 1380', 'Camera' => '8 MP rear camera', 'Battery' => '8,000 mAh', 'Connectivity' => 'Wi-Fi 6', 'SIM' => 'Wi-Fi', 'Warranty' => '1 year'],
+            'onemax-ultra' => ['Display' => '6.82-inch LTPO AMOLED', 'Processor' => 'Snapdragon 8 Elite', 'Camera' => '50 MP Hasselblad camera', 'Battery' => '6,000 mAh', 'Connectivity' => '5G', 'SIM' => 'Dual SIM', 'Warranty' => '1 year'],
+            'fold-vision' => ['Display' => '7.6-inch foldable OLED', 'Processor' => 'Snapdragon 8 Elite', 'Camera' => '50 MP flexible camera', 'Battery' => '4,800 mAh', 'Connectivity' => '5G', 'SIM' => 'Dual SIM', 'Warranty' => '1 year'],
+        ];
+
+        return $specifications[$slug] ?? ['Connectivity' => '5G', 'SIM' => 'Dual SIM', 'Warranty' => '1 year'];
     }
 }

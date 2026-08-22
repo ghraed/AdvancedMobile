@@ -32,6 +32,8 @@
     ];
     $specifications = collect($catalogProduct->specifications ?? []);
     $whatsAppShareUrl = 'https://wa.me/?text='.rawurlencode('Check out '.$catalogProduct->name.': '.route('products.show', $catalogProduct));
+    $salesSupportNumber = preg_replace('/\D+/', '', (string) config('services.whatsapp.sales_support_number'));
+    $whatsAppSupportUrl = $salesSupportNumber ? 'https://wa.me/'.$salesSupportNumber.'?text='.rawurlencode('Hi, I need sales or support help with '.$catalogProduct->name.': '.route('products.show', $catalogProduct)) : null;
 @endphp
 
 @extends('layouts.elite-mobile-marketplace')
@@ -44,38 +46,49 @@
     <x-public.search-overlay />
 
     <script id="product-detail-data" type="application/json">@json($productData)</script>
-    <main class="mx-auto max-w-[1500px] px-4 pb-28 pt-7 sm:px-6 lg:px-[54px] lg:pb-14" data-product-detail>
-        <nav aria-label="Breadcrumb" class="mb-5 flex items-center gap-2 text-sm text-[var(--pm-text-muted)]"><a href="{{ route('catalog.index') }}" data-safe-back class="inline-flex items-center gap-1 font-bold text-[var(--pm-primary)]"><span class="material-symbols-outlined text-lg">arrow_back</span> Shop</a><span>/</span>@if($catalogProduct->category)<a href="{{ route('categories.show', $catalogProduct->category) }}" class="hover:underline">{{ $catalogProduct->category->name }}</a><span>/</span>@endif<span aria-current="page">{{ $catalogProduct->name }}</span></nav>
-        <div class="lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,.9fr)] lg:gap-10">
-            <section>
-                <div class="flex aspect-square items-center justify-center rounded-[26px] border border-[var(--pm-border)] bg-gradient-to-br from-slate-50 to-slate-200 p-5 shadow-[0_16px_42px_rgba(15,23,42,.08)]"><img data-main-image src="{{ $fallbackImages->first()['url'] ?? '' }}" alt="{{ $fallbackImages->first()['alt'] ?? $catalogProduct->name }}" class="h-full w-full object-contain" @if($fallbackImages->isEmpty()) hidden @endif><span data-main-mock class="pm-product-detail-mock" style="--mock-phone-color: {{ $initial?->color_option?->hex_value ?: '#2563eb' }}" @if($fallbackImages->isNotEmpty()) hidden @endif aria-hidden="true"></span></div>
-                <div class="mt-3 flex gap-2 overflow-x-auto pb-1" data-thumbnails aria-label="Product image gallery"></div>
+    <main class="pm-product-page" data-product-detail>
+        <nav aria-label="Breadcrumb" class="pm-breadcrumb"><a href="{{ route('catalog.index') }}" data-safe-back><span class="material-symbols-outlined">arrow_back</span> Collection</a><span>/</span>@if($catalogProduct->category)<a href="{{ route('categories.show', $catalogProduct->category) }}">{{ $catalogProduct->category->name }}</a><span>/</span>@endif<span aria-current="page">{{ $catalogProduct->name }}</span></nav>
+        <div class="pm-detail-layout">
+            <section class="pm-detail-gallery" aria-label="{{ $catalogProduct->name }} gallery">
+                <div class="pm-detail-gallery__edition"><span>TAQQSIT EDIT</span><small>{{ now()->format('Y') }}</small></div>
+                <div class="pm-detail-gallery__stage"><img data-main-image src="{{ $fallbackImages->first()['url'] ?? '' }}" alt="{{ $fallbackImages->first()['alt'] ?? $catalogProduct->name }}" class="h-full w-full object-contain" @if($fallbackImages->isEmpty()) hidden @endif><span data-main-mock class="pm-product-detail-mock" style="--mock-phone-color: {{ $initial?->color_option?->hex_value ?: '#687f68' }}" @if($fallbackImages->isNotEmpty()) hidden @endif aria-hidden="true"></span></div>
+                <div class="pm-detail-thumbnails" data-thumbnails aria-label="Product image gallery"></div>
+                <div class="pm-detail-gallery__caption"><span>01</span><p>Designed to be seen.<br>Selected to be lived with.</p></div>
             </section>
-            <section class="pm-card mt-6 self-start rounded-[26px] p-5 lg:sticky lg:top-24 lg:mt-0 lg:p-6">
-                @if($catalogProduct->brand)<p class="text-sm font-bold uppercase tracking-[.16em] text-[var(--pm-secondary)]">{{ $catalogProduct->brand }}</p>@endif
-                <h1 class="mt-1 text-3xl font-extrabold text-[var(--pm-text)] lg:text-5xl">{{ $catalogProduct->name }}</h1>
-                @if($catalogProduct->short_description)<p class="mt-3 leading-7 text-[var(--pm-text-muted)]">{{ $catalogProduct->short_description }}</p>@endif
-                <a href="{{ $whatsAppShareUrl }}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-2 text-sm font-extrabold text-[#128c7e] hover:underline" aria-label="Share {{ $catalogProduct->name }} on WhatsApp"><span class="material-symbols-outlined text-lg">share</span> Share on WhatsApp</a>
-                <div class="mt-5"><p data-price class="text-3xl font-extrabold text-[var(--pm-primary)]">{{ $initial ? '$'.number_format((float) $initial->price, 2) : 'Unavailable' }}</p><p data-compare-price class="mt-1 text-sm text-[var(--pm-text-muted)]">@if($initial?->compare_at_price) Was ${{ number_format((float) $initial->compare_at_price, 2) }} @endif</p><p data-stock class="mt-2 text-sm font-semibold {{ $initial?->is_available ? 'text-emerald-700' : 'text-red-700' }}" aria-live="polite">{{ $initial ? ($initial->is_available ? ($initial->stock_quantity <= 5 ? 'Only '.$initial->stock_quantity.' left in stock.' : 'In stock.') : 'Out of stock.') : '' }}</p><p data-status class="mt-2 text-sm text-[var(--pm-danger)]" aria-live="polite"></p></div>
+            <section class="pm-purchase-panel">
+                <div class="pm-purchase-panel__topline"><span>Private collection</span><a href="{{ $whatsAppShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share {{ $catalogProduct->name }} on WhatsApp"><span class="material-symbols-outlined">share</span> Share on WhatsApp</a></div>
+                @if($catalogProduct->brand)<p class="pm-product-brand">{{ $catalogProduct->brand }}</p>@endif
+                <h1>{{ $catalogProduct->name }}</h1>
+                @if($catalogProduct->short_description)<p class="pm-purchase-panel__intro">{{ $catalogProduct->short_description }}</p>@endif
+                <div class="pm-purchase-panel__price"><div><span>From</span><p data-price>{{ $initial ? '$'.number_format((float) $initial->price, 2) : 'Unavailable' }}</p><p data-compare-price>@if($initial?->compare_at_price) Was ${{ number_format((float) $initial->compare_at_price, 2) }} @endif</p></div><div class="pm-availability"><span></span><p data-stock class="{{ $initial?->is_available ? 'text-emerald-700' : 'text-red-700' }}" aria-live="polite">{{ $initial ? ($initial->is_available ? ($initial->stock_quantity <= 5 ? 'Only '.$initial->stock_quantity.' left in stock.' : 'In stock.') : 'Out of stock.') : '' }}</p></div></div><p data-status class="mt-2 text-sm text-[var(--pm-danger)]" aria-live="polite"></p>
 
-                <section class="mt-6 border-t border-[var(--pm-border)] pt-5">
+                <section class="pm-option-studio">
                     @if($storageValues->isNotEmpty())<fieldset><div class="flex items-center justify-between gap-3"><legend class="font-extrabold text-[var(--pm-text)]">Storage</legend><span data-selected-storage class="text-sm font-bold text-[var(--pm-text-muted)]">{{ $initial?->storage_option?->display_name }}</span></div><div data-storage-options class="mt-3 grid grid-cols-3 gap-2">@foreach($storageValues as $value)<button type="button" disabled class="rounded-xl border border-[var(--pm-border)] bg-white px-2 py-3 text-sm font-bold text-[var(--pm-text)]">{{ $value->display_name ?: $value->name }}</button>@endforeach</div></fieldset>@endif
                     @if($colorValues->isNotEmpty())<fieldset class="{{ $storageValues->isNotEmpty() ? 'mt-6' : '' }}"><div class="flex items-center justify-between gap-3"><legend class="font-extrabold text-[var(--pm-text)]">Color</legend><span data-selected-color class="text-sm font-bold text-[var(--pm-text-muted)]">{{ $initial?->color_option?->display_name }}</span></div><div data-color-options class="mt-3 flex flex-wrap gap-3">@foreach($colorValues as $value)<button type="button" disabled title="{{ $value->display_name ?: $value->name }}" aria-label="{{ $value->display_name ?: $value->name }} color" class="h-9 w-9 rounded-full border-4 border-white shadow-[0_0_0_1px_#cbd5e1]" style="background: {{ $value->hex_value ?: '#cbd5e1' }}"><span class="sr-only">{{ $value->display_name ?: $value->name }}</span></button>@endforeach</div></fieldset>@endif
                 </section>
 
-                <section class="mt-6 border-t border-[var(--pm-border)] pt-5" data-plan-section hidden>
+                <section class="pm-option-studio" data-plan-section hidden>
                     <div class="flex items-center justify-between gap-3"><h2 class="font-extrabold text-[var(--pm-text)]">Installment plans</h2><span class="text-sm font-bold text-[var(--pm-primary)]">View schedule</span></div>
                     <div data-plan-options class="mt-3 grid grid-cols-3 gap-2"></div>
                     <div data-calendar class="mt-4 rounded-[17px] bg-slate-50 p-4 text-sm" aria-live="polite"></div>
                 </section>
-                <button data-purchase disabled class="pm-button pm-button--accent mt-5 w-full justify-center disabled:cursor-not-allowed disabled:opacity-50">Continue to purchase</button>
+                <button data-purchase disabled class="pm-button pm-button--accent mt-6 w-full justify-center disabled:cursor-not-allowed disabled:opacity-50">Continue to purchase <span class="material-symbols-outlined">arrow_forward</span></button>
+                <div class="pm-purchase-assurances"><span><i class="material-symbols-outlined">verified_user</i>Verified stock</span><span><i class="material-symbols-outlined">payments</i>Flexible payment</span><span><i class="material-symbols-outlined">support_agent</i>Personal support</span></div>
             </section>
         </div>
 
-        @if($catalogProduct->description)<section class="mt-8"><h2 class="text-xl font-bold">Full description</h2><article class="pm-card mt-3 leading-7 text-[var(--pm-text-muted)]">{!! nl2br(e($catalogProduct->description)) !!}</article></section>@endif
-        @if($specifications->isNotEmpty())<section class="mt-8"><h2 class="text-xl font-bold">Specifications</h2><dl class="pm-card mt-3 grid gap-3 sm:grid-cols-2">@foreach($specifications as $key => $specification) @php($label = is_array($specification) ? ($specification['key'] ?? 'Specification') : $key) @php($value = is_array($specification) ? ($specification['value'] ?? '') : $specification)<div class="border-b border-[var(--pm-border)] pb-3 last:border-0"><dt class="text-sm text-[var(--pm-text-muted)]">{{ $label }}</dt><dd class="mt-1 font-semibold">{{ $value }}</dd></div>@endforeach</dl></section>@endif
-        @if(($similarProducts ?? collect())->isNotEmpty())<section class="mt-8" aria-labelledby="similar-products"><div class="flex items-end justify-between gap-4"><div><p class="text-xs font-extrabold uppercase tracking-[.16em] text-[var(--pm-secondary)]">You may also like</p><h2 id="similar-products" class="mt-1 text-xl font-bold">Similar products</h2></div><a href="{{ route('catalog.index', ['category' => $catalogProduct->category?->slug]) }}" class="shrink-0 text-sm font-extrabold text-[var(--pm-primary)] hover:underline">Explore category</a></div><div class="mt-3">@include('elite-mobile-marketplace.partials.product-grid', ['products' => $similarProducts])</div></section>@endif
+        @if($catalogProduct->description)
+            <section class="pm-product-story">
+                <div><p class="pm-luxury-kicker">The experience</p><h2>More than specifications.<br>A better everyday.</h2></div>
+                <article><span class="pm-product-story__quote">“</span><p>{!! nl2br(e($catalogProduct->description)) !!}</p></article>
+            </section>
+        @endif
+        @if($specifications->isNotEmpty())
+            <section class="pm-specification-suite" aria-labelledby="product-specifications"><div class="pm-editorial-heading"><p>Inside the device</p><h2 id="product-specifications">Specifications, beautifully considered.</h2></div><dl>@foreach($specifications as $key => $specification) @php($label = is_array($specification) ? ($specification['key'] ?? 'Specification') : $key) @php($value = is_array($specification) ? ($specification['value'] ?? '') : $specification)<div><dt>{{ $label }}</dt><dd>{{ $value }}</dd><span class="material-symbols-outlined">check</span></div>@endforeach</dl></section>
+        @endif
+        @if(($similarProducts ?? collect())->isNotEmpty())<section class="pm-collection-section" aria-labelledby="similar-products"><div class="pm-section-head"><div><p>Continue exploring · Similar products</p><h2 id="similar-products">You may also like</h2></div><a href="{{ route('catalog.index', ['category' => $catalogProduct->category?->slug]) }}" class="pm-editorial-link">Explore category <span class="material-symbols-outlined">arrow_forward</span></a></div>@include('elite-mobile-marketplace.partials.product-grid', ['products' => $similarProducts])</section>@endif
     </main>
+    <x-public.support-button :href="$whatsAppSupportUrl" />
     <div data-purchase-modal hidden class="fixed inset-0 z-50 flex items-end bg-slate-950/50 p-0 sm:items-center sm:justify-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="purchase-preview-title">
         <section class="max-h-[90vh] w-full overflow-y-auto rounded-t-[28px] bg-white p-6 sm:max-w-lg sm:rounded-[28px]">
             <div class="flex items-start justify-between gap-4"><div><h2 id="purchase-preview-title" class="text-xl font-extrabold">Review payment calendar</h2><p data-modal-product class="mt-1 text-sm text-[var(--pm-text-muted)]"></p></div><button type="button" data-close-modal class="rounded-full p-1" aria-label="Close payment calendar"><span class="material-symbols-outlined">close</span></button></div>

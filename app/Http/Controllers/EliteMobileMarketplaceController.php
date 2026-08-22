@@ -68,6 +68,26 @@ class EliteMobileMarketplaceController extends Controller
         return $this->catalogResponse($request);
     }
 
+    public function compare(Request $request): View
+    {
+        $data = $request->validate([
+            'products' => ['nullable', 'array', 'max:3'],
+            'products.*' => ['required', 'string', 'max:255', 'distinct'],
+        ]);
+        $slugs = collect($data['products'] ?? [])->values();
+        $comparisonProducts = Product::query()->publiclyAvailable()->with($this->productRelations())
+            ->whereIn('slug', $slugs)
+            ->get()
+            ->sortBy(fn (Product $product) => $slugs->search($product->slug))
+            ->values();
+
+        return view('elite-mobile-marketplace.compare', [
+            'activeTab' => 'shop',
+            'menuCategories' => $this->categoryMenuService->visibleRootCategories(),
+            'comparisonProducts' => $comparisonProducts,
+        ]);
+    }
+
     public function showProduct(Product $product): View
     {
         abort_unless(Product::query()->whereKey($product->id)->publiclyAvailable()->exists(), 404);

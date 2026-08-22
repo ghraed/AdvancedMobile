@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        'sales_support_number' => env('WHATSAPP_SALES_SUPPORT_NUMBER'),
+    ],
+
 ];

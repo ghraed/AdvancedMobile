@@ -1,4 +1,8 @@
-@props(['href' => null, 'label' => 'Support'])
-@if ($href)
-    <a href="{{ $href }}" class="fixed bottom-5 right-5 z-10 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg hover:bg-slate-700"><span class="material-symbols-outlined">chat</span>{{ $label }}</a>
+@props(['href' => null, 'label' => 'WhatsApp sales & support', 'inline' => false])
+@php
+    $salesSupportNumber = preg_replace('/\D+/', '', (string) config('services.whatsapp.sales_support_number'));
+    $supportHref = $href ?: ($salesSupportNumber ? 'https://wa.me/'.$salesSupportNumber.'?text='.rawurlencode('Hi, I need help with a product or purchase.') : null);
+@endphp
+@if ($supportHref)
+    <a href="{{ $supportHref }}" target="_blank" rel="noopener noreferrer" class="{{ $inline ? 'pm-concierge-button' : 'pm-support-float' }}"><span class="material-symbols-outlined">chat</span>{{ $label }}</a>
 @endif
