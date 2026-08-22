@@ -26,12 +26,29 @@ class EliteMobileMarketplaceController extends Controller
 
     public function home(): View
     {
-        return view('elite-mobile-marketplace.home', $this->storefrontData(
-            Product::query()->publiclyAvailable()->with($this->productRelations())
-                ->orderByRaw('COALESCE(published_at, created_at) DESC')
-                ->limit(8)
-                ->get()
-        ));
+        $recommendedProducts = Product::query()->publiclyAvailable()->with($this->productRelations())
+            ->where('is_featured', true)
+            ->orderByRaw('COALESCE(published_at, created_at) DESC')
+            ->limit(8)
+            ->get();
+
+        $limitedTimeOffers = Product::query()->publiclyAvailable()->with($this->productRelations())
+            ->where('offer_ends_at', '>', now())
+            ->whereHas('variants', fn ($variants) => $variants->available()
+                ->whereNotNull('compare_at_price')->whereColumn('compare_at_price', '>', 'price'))
+            ->orderBy('offer_ends_at')
+            ->limit(4)
+            ->get();
+
+        $trendingProducts = Product::query()->publiclyAvailable()->with($this->productRelations())
+            ->where('is_trending', true)
+            ->orderByRaw('COALESCE(published_at, created_at) DESC')
+            ->limit(8)
+            ->get();
+
+        return view('elite-mobile-marketplace.home', array_merge($this->storefrontData(
+            $recommendedProducts
+        ), ['limitedTimeOffers' => $limitedTimeOffers, 'trendingProducts' => $trendingProducts]));
     }
 
     public function catalog(Request $request): View
@@ -59,11 +76,12 @@ class EliteMobileMarketplaceController extends Controller
             'category', 'images', 'variants.images', 'variants.optionValues.productOption', 'installmentPlans',
         ]);
 
-        $relatedProducts = Product::query()
+        $similarProducts = Product::query()
             ->publiclyAvailable()
             ->where('category_id', $product->category_id)
             ->whereKeyNot($product->id)
             ->with($this->productRelations())
+            ->when(filled($product->brand), fn ($products) => $products->orderByRaw('CASE WHEN brand = ? THEN 0 ELSE 1 END', [$product->brand]))
             ->latest('published_at')
             ->limit(4)
             ->get();
@@ -75,7 +93,7 @@ class EliteMobileMarketplaceController extends Controller
             ?? $product->variants->filter(fn (ProductVariant $variant) => $variant->is_active)->sortBy('price')->first();
 
         return view('elite-mobile-marketplace.product-details', [
-            'activeTab' => 'shop', 'productModel' => $product, 'isPreview' => false, 'relatedProducts' => $relatedProducts,
+            'activeTab' => 'shop', 'productModel' => $product, 'isPreview' => false, 'similarProducts' => $similarProducts,
             'initialVariantPayload' => $initialVariant ? $this->variantPayload($product, $initialVariant) : null,
             'menuCategories' => $this->categoryMenuService->visibleRootCategories(),
         ]);

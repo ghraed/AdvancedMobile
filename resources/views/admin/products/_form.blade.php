@@ -148,6 +148,17 @@
                 value="{{ old('published_at', optional($product->published_at)->format('Y-m-d\TH:i')) }}"
             >
         </div>
+        <div class="admin-field">
+            <label class="admin-label" for="offer_ends_at">Limited-time Offer Ends</label>
+            <input
+                class="admin-input"
+                id="offer_ends_at"
+                type="datetime-local"
+                name="offer_ends_at"
+                value="{{ old('offer_ends_at', optional($product->offer_ends_at)->format('Y-m-d\TH:i')) }}"
+            >
+            <p class="admin-help">Set this only for discounted variants. The offer is hidden automatically after this time.</p>
+        </div>
         <div class="admin-field" style="grid-column: 1 / -1;">
             <label class="admin-label" for="short_description">Short Description</label>
             <input class="admin-input" id="short_description" name="short_description" value="{{ old('short_description', $product->short_description) }}">
@@ -159,6 +170,11 @@
             <input type="hidden" name="is_featured" value="0">
             <input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $product->is_featured ?? false))>
             <span>Featured product</span>
+        </label>
+        <label style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+            <input type="hidden" name="is_trending" value="0">
+            <input type="checkbox" name="is_trending" value="1" @checked(old('is_trending', $product->is_trending ?? false))>
+            <span>Show in trending products</span>
         </label>
     </div>
 </div>

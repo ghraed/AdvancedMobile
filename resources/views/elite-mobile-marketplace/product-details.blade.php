@@ -31,6 +31,7 @@
         'applicationUrl' => route('installments.create', [], false),
     ];
     $specifications = collect($catalogProduct->specifications ?? []);
+    $whatsAppShareUrl = 'https://wa.me/?text='.rawurlencode('Check out '.$catalogProduct->name.': '.route('products.show', $catalogProduct));
 @endphp
 
 @extends('layouts.elite-mobile-marketplace')
@@ -54,6 +55,7 @@
                 @if($catalogProduct->brand)<p class="text-sm font-bold uppercase tracking-[.16em] text-[var(--pm-secondary)]">{{ $catalogProduct->brand }}</p>@endif
                 <h1 class="mt-1 text-3xl font-extrabold text-[var(--pm-text)] lg:text-5xl">{{ $catalogProduct->name }}</h1>
                 @if($catalogProduct->short_description)<p class="mt-3 leading-7 text-[var(--pm-text-muted)]">{{ $catalogProduct->short_description }}</p>@endif
+                <a href="{{ $whatsAppShareUrl }}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-2 text-sm font-extrabold text-[#128c7e] hover:underline" aria-label="Share {{ $catalogProduct->name }} on WhatsApp"><span class="material-symbols-outlined text-lg">share</span> Share on WhatsApp</a>
                 <div class="mt-5"><p data-price class="text-3xl font-extrabold text-[var(--pm-primary)]">{{ $initial ? '$'.number_format((float) $initial->price, 2) : 'Unavailable' }}</p><p data-compare-price class="mt-1 text-sm text-[var(--pm-text-muted)]">@if($initial?->compare_at_price) Was ${{ number_format((float) $initial->compare_at_price, 2) }} @endif</p><p data-stock class="mt-2 text-sm font-semibold {{ $initial?->is_available ? 'text-emerald-700' : 'text-red-700' }}" aria-live="polite">{{ $initial ? ($initial->is_available ? ($initial->stock_quantity <= 5 ? 'Only '.$initial->stock_quantity.' left in stock.' : 'In stock.') : 'Out of stock.') : '' }}</p><p data-status class="mt-2 text-sm text-[var(--pm-danger)]" aria-live="polite"></p></div>
 
                 <section class="mt-6 border-t border-[var(--pm-border)] pt-5">
@@ -72,7 +74,7 @@
 
         @if($catalogProduct->description)<section class="mt-8"><h2 class="text-xl font-bold">Full description</h2><article class="pm-card mt-3 leading-7 text-[var(--pm-text-muted)]">{!! nl2br(e($catalogProduct->description)) !!}</article></section>@endif
         @if($specifications->isNotEmpty())<section class="mt-8"><h2 class="text-xl font-bold">Specifications</h2><dl class="pm-card mt-3 grid gap-3 sm:grid-cols-2">@foreach($specifications as $key => $specification) @php($label = is_array($specification) ? ($specification['key'] ?? 'Specification') : $key) @php($value = is_array($specification) ? ($specification['value'] ?? '') : $specification)<div class="border-b border-[var(--pm-border)] pb-3 last:border-0"><dt class="text-sm text-[var(--pm-text-muted)]">{{ $label }}</dt><dd class="mt-1 font-semibold">{{ $value }}</dd></div>@endforeach</dl></section>@endif
-        @if(($relatedProducts ?? collect())->isNotEmpty())<section class="mt-8"><h2 class="text-xl font-bold">Related products</h2><div class="mt-3">@include('elite-mobile-marketplace.partials.product-grid', ['products' => $relatedProducts])</div></section>@endif
+        @if(($similarProducts ?? collect())->isNotEmpty())<section class="mt-8" aria-labelledby="similar-products"><div class="flex items-end justify-between gap-4"><div><p class="text-xs font-extrabold uppercase tracking-[.16em] text-[var(--pm-secondary)]">You may also like</p><h2 id="similar-products" class="mt-1 text-xl font-bold">Similar products</h2></div><a href="{{ route('catalog.index', ['category' => $catalogProduct->category?->slug]) }}" class="shrink-0 text-sm font-extrabold text-[var(--pm-primary)] hover:underline">Explore category</a></div><div class="mt-3">@include('elite-mobile-marketplace.partials.product-grid', ['products' => $similarProducts])</div></section>@endif
     </main>
     <div data-purchase-modal hidden class="fixed inset-0 z-50 flex items-end bg-slate-950/50 p-0 sm:items-center sm:justify-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="purchase-preview-title">
         <section class="max-h-[90vh] w-full overflow-y-auto rounded-t-[28px] bg-white p-6 sm:max-w-lg sm:rounded-[28px]">

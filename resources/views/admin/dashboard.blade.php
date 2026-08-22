@@ -58,6 +58,7 @@
                     <span class="admin-kpi__label">Low-stock variants</span>
                     <span class="admin-kpi__value">{{ $stats['low_stock_variants'] }}</span>
                     <x-admin.status-badge :status="$stats['low_stock_variants'] > 0 ? 'warning' : 'success'" :label="$stats['low_stock_variants'] > 0 ? 'Needs attention' : 'Healthy'" />
+                    @if($stats['low_stock_variants'] > 0)<a href="{{ route('admin.products.index', ['stock' => 'low_stock']) }}" class="admin-link-button" style="margin-top:10px;">Review low stock</a>@endif
                 </div>
                 <div class="admin-card admin-card--tight admin-kpi">
                     <span class="admin-kpi__label">Out-of-stock variants</span>

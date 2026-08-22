@@ -11,6 +11,7 @@
     <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-4">
         @foreach ($products as $product)
             @php($variants = $product->variants)
+            @php($availableStock = (int) $variants->sum('stock_quantity'))
             @php($minPrice = $variants->min('price'))
             @php($maxPrice = $variants->max('price'))
             @php($image = $product->images->first())
@@ -19,10 +20,12 @@
             @php($primaryColor = $colors->first())
             @php($plans = $product->installmentPlans->filter(fn ($plan) => $plan->is_active && (!$plan->product_variant_id || $variants->contains('id', $plan->product_variant_id))))
             @php($plan = $plans->sortBy('installment_amount')->first())
+            @php($hasLimitedOffer = ($showOfferBadges ?? false) && $product->offer_ends_at?->isFuture() && $variants->contains(fn ($variant) => $variant->compare_at_price && $variant->compare_at_price > $variant->price))
             <article class="group overflow-hidden rounded-[22px] border border-slate-200/90 bg-white p-3 transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_22px_45px_rgba(15,23,42,.11)]">
                 <a href="{{ route('products.show', $product) }}" class="block">
                     <div class="relative flex aspect-[1/.88] items-center justify-center overflow-hidden rounded-[17px] bg-gradient-to-br from-slate-50 to-slate-200 p-5">
-                        <span class="absolute left-3 top-3 z-10 rounded-full bg-green-100 px-2 py-1 text-[11px] font-black text-green-700">In stock</span>
+                        @if($availableStock <= 5)<span class="absolute left-3 top-3 z-10 rounded-full bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-800">Only {{ $availableStock }} left</span>@else<span class="absolute left-3 top-3 z-10 rounded-full bg-green-100 px-2 py-1 text-[11px] font-black text-green-700">In stock</span>@endif
+                        @if($hasLimitedOffer)<span class="absolute right-3 top-3 z-10 rounded-full bg-rose-600 px-2 py-1 text-[11px] font-black text-white">Offer ends {{ $product->offer_ends_at->format('M j') }}</span>@endif
                         @if ($image)
                             <img src="{{ asset('storage/'.$image->image_path) }}" alt="{{ $image->alt_text ?: $product->name }}" class="h-full w-full object-contain transition duration-300 group-hover:scale-105">
                         @else

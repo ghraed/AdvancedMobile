@@ -27,14 +27,18 @@ class Product extends Model
         'brand',
         'status',
         'is_featured',
+        'is_trending',
         'published_at',
+        'offer_ends_at',
     ];
 
     protected $casts = [
         'specifications' => 'array',
         'status' => ProductStatus::class,
         'is_featured' => 'boolean',
+        'is_trending' => 'boolean',
         'published_at' => 'datetime',
+        'offer_ends_at' => 'datetime',
     ];
 
     protected static function booted(): void

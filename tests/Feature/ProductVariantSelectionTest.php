@@ -68,13 +68,14 @@ class ProductVariantSelectionTest extends TestCase
             ->assertJsonPath('images.0.alt', 'Black gallery image')->assertJsonPath('images.0.url', asset('storage/products/black-gallery.webp'));
     }
 
-    public function test_product_page_includes_selectors_and_related_products_section(): void
+    public function test_product_page_includes_selectors_and_similar_product_suggestions(): void
     {
         [$product] = $this->productWithVariants();
 
         $this->get(route('products.show', $product))->assertOk()
             ->assertSeeText('Storage')->assertSeeText('Color')->assertSeeText('Installment plans')
-            ->assertSeeText('Continue to purchase')->assertSeeText('Related products')
+            ->assertSeeText('Continue to purchase')->assertSeeText('Similar products')
+            ->assertSeeText('Share on WhatsApp')->assertSee('https://wa.me/?text=', false)
             ->assertDontSee(config('app.url').'/products/'.$product->slug.'/resolve-variant', false);
     }
 

@@ -39,7 +39,9 @@ class ProductRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'status' => ['required', Rule::enum(ProductStatus::class)],
             'is_featured' => ['nullable', 'boolean'],
+            'is_trending' => ['nullable', 'boolean'],
             'published_at' => ['nullable', 'date'],
+            'offer_ends_at' => ['nullable', 'date'],
             'specifications' => ['nullable', 'array'],
             'specifications.*.key' => ['nullable', 'string', 'max:255'],
             'specifications.*.value' => ['nullable', 'string', 'max:1000'],
@@ -134,7 +136,7 @@ class ProductRequest extends FormRequest
                 ->all();
         }
 
-        foreach (['is_featured', 'confirm_variant_retirement'] as $field) {
+        foreach (['is_featured', 'is_trending', 'confirm_variant_retirement'] as $field) {
             $payload[$field] = $this->boolean($field);
         }
 
