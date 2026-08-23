@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DeviceUnitController;
 use App\Http\Controllers\Admin\InstallmentAccountController as AdminInstallmentAccountController;
 use App\Http\Controllers\Admin\InstallmentApplicationController as AdminInstallmentApplicationController;
 use App\Http\Controllers\Admin\InstallmentPlanController;
@@ -27,6 +28,9 @@ Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update
 Route::get('/compare', [EliteMobileMarketplaceController::class, 'compare'])->name('products.compare');
 Route::get('/product-details', [EliteMobileMarketplaceController::class, 'productDetails']);
 Route::get('/products/{product:slug}', [EliteMobileMarketplaceController::class, 'showProduct'])->name('products.show');
+Route::get('/products/{product:slug}/devices/{deviceUnit}', [EliteMobileMarketplaceController::class, 'showDeviceUnit'])->name('device-units.show');
+Route::get('/used-phones', [EliteMobileMarketplaceController::class, 'usedPhones'])->name('used-phones.index');
+Route::get('/refurbished-phones', [EliteMobileMarketplaceController::class, 'refurbishedPhones'])->name('refurbished-phones.index');
 Route::post('/products/{product:slug}/check-compatibility', [EliteMobileMarketplaceController::class, 'checkCompatibility'])->name('products.check-compatibility');
 Route::get('/accessories/compatible', [EliteMobileMarketplaceController::class, 'compatibleAccessories'])->name('accessories.compatible');
 Route::post('/products/{product:slug}/resolve-variant', [EliteMobileMarketplaceController::class, 'resolveVariant'])->name('products.resolve-variant');
@@ -117,6 +121,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/products/{product}/installment-preview', [ProductController::class, 'previewInstallmentPlan'])->name('products.installment-preview');
         Route::resource('categories', CategoryController::class);
         Route::resource('products', ProductController::class)->except('show');
+        Route::patch('/device-units/{device_unit}/retire', [DeviceUnitController::class, 'retire'])->name('device-units.retire');
+        Route::resource('device-units', DeviceUnitController::class)->except('destroy')->parameters(['device-units' => 'device_unit']);
         Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
     });
 });

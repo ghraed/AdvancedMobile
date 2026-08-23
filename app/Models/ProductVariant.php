@@ -21,6 +21,7 @@ class ProductVariant extends Model
         'compare_at_price',
         'cost_price_cents',
         'stock_quantity',
+        'is_unit_managed',
         'is_active',
         'option_signature',
     ];
@@ -29,6 +30,7 @@ class ProductVariant extends Model
         'price' => 'decimal:2',
         'compare_at_price' => 'decimal:2',
         'is_active' => 'boolean',
+        'is_unit_managed' => 'boolean',
     ];
 
     public function product(): BelongsTo
@@ -51,6 +53,9 @@ class ProductVariant extends Model
         return $this->hasMany(InstallmentPlan::class)->orderBy('number_of_payments');
     }
 
+    public function deviceUnits(): HasMany { return $this->hasMany(DeviceUnit::class); }
+    public function availableDeviceUnits(): HasMany { return $this->deviceUnits()->available(); }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
@@ -58,7 +63,10 @@ class ProductVariant extends Model
 
     public function scopeInStock(Builder $query): Builder
     {
-        return $query->where('stock_quantity', '>', 0);
+        return $query->where(function (Builder $query): void {
+            $query->where(fn (Builder $normal) => $normal->where('is_unit_managed', false)->where('stock_quantity', '>', 0))
+                ->orWhere(fn (Builder $units) => $units->where('is_unit_managed', true)->whereHas('deviceUnits', fn (Builder $deviceUnits) => $deviceUnits->available()));
+        });
     }
 
     public function scopeAvailable(Builder $query): Builder
@@ -109,6 +117,16 @@ class ProductVariant extends Model
 
     public function getIsAvailableAttribute(): bool
     {
-        return $this->is_active && $this->stock_quantity > 0;
+        return $this->is_active && ($this->is_unit_managed
+            ? ($this->relationLoaded('deviceUnits') ? $this->deviceUnits->where('status', \App\Enums\DeviceUnitStatus::Available)->isNotEmpty() : $this->availableDeviceUnits()->exists())
+            : $this->stock_quantity > 0);
+    }
+
+    public function getAvailableStockAttribute(): int
+    {
+        if (! $this->is_unit_managed) return (int) $this->stock_quantity;
+        return $this->relationLoaded('deviceUnits')
+            ? $this->deviceUnits->where('status', \App\Enums\DeviceUnitStatus::Available)->count()
+            : $this->availableDeviceUnits()->count();
     }
 }

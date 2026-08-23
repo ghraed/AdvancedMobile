@@ -100,6 +100,11 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
+    public function deviceUnits(): HasManyThrough
+    {
+        return $this->hasManyThrough(DeviceUnit::class, ProductVariant::class, 'product_id', 'product_variant_id');
+    }
+
     public function deviceProfile(): HasOne
     {
         return $this->hasOne(DeviceProfile::class);

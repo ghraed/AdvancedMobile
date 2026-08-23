@@ -4,13 +4,18 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\DeviceUnit;
 use Illuminate\Support\Collection;
 
 class ProductImageResolver
 {
     /** Exact-variant override, selected color gallery, then general gallery. */
-    public function resolve(Product $product, ProductVariant $variant): Collection
+    public function resolve(Product $product, ProductVariant $variant, ?DeviceUnit $deviceUnit = null): Collection
     {
+        if ($deviceUnit) {
+            $unitImages = $deviceUnit->relationLoaded('images') ? $deviceUnit->images : $deviceUnit->images()->get();
+            if ($unitImages->isNotEmpty()) return $unitImages;
+        }
         $variantImages = $variant->relationLoaded('images') ? $variant->images : $variant->images()->get();
         if ($variantImages->isNotEmpty()) return $variantImages;
 

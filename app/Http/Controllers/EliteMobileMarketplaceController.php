@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Enums\AccessorySubtype;
 use App\Enums\ProductType;
 use App\Models\Category;
+use App\Models\DeviceUnit;
+use App\Enums\DeviceConditionType;
+use App\Enums\DeviceUnitStatus;
 use App\Models\InstallmentPlan;
 use App\Models\Product;
 use App\Models\ProductOption;
@@ -16,6 +19,7 @@ use App\Services\AccessoryCompatibilityService;
 use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
@@ -95,11 +99,40 @@ class EliteMobileMarketplaceController extends Controller
 
     public function showProduct(Product $product): View
     {
+        return $this->renderProduct($product);
+    }
+
+    public function showDeviceUnit(Product $product, DeviceUnit $deviceUnit): View
+    {
+        abort_unless($deviceUnit->variant()->where('product_id', $product->id)->exists()
+            && $deviceUnit->status === DeviceUnitStatus::Available
+            && Product::query()->whereKey($product->id)->publiclyAvailable()->exists(), 404);
+        return $this->renderProduct($product, $deviceUnit);
+    }
+
+    public function usedPhones(Request $request): View
+    {
+        $request->merge(['condition' => DeviceConditionType::Used->value]);
+        return $this->catalogResponse($request, null, 'Used Phones');
+    }
+
+    public function refurbishedPhones(Request $request): View
+    {
+        $request->merge(['condition' => DeviceConditionType::Refurbished->value]);
+        return $this->catalogResponse($request, null, 'Refurbished Phones');
+    }
+
+    protected function renderProduct(Product $product, ?DeviceUnit $selectedDeviceUnit = null): View
+    {
         abort_unless(Product::query()->whereKey($product->id)->publiclyAvailable()->exists(), 404);
 
         $product->load([
-            'category', 'images', 'variants.images', 'variants.optionValues.productOption', 'installmentPlans',
+            'category', 'images', 'variants.images', 'variants.optionValues.productOption', 'variants.deviceUnits.images', 'installmentPlans',
         ]);
+
+        $selectedDeviceUnit ??= $product->variants->flatMap->deviceUnits
+            ->where('status', DeviceUnitStatus::Available)
+            ->sortBy(fn (DeviceUnit $unit) => $unit->selling_price_cents)->first();
 
         $similarProducts = Product::query()
             ->publiclyAvailable()
@@ -111,7 +144,7 @@ class EliteMobileMarketplaceController extends Controller
             ->limit(4)
             ->get();
 
-        $initialVariant = $product->variants
+        $initialVariant = $selectedDeviceUnit?->variant ?? $product->variants
             ->filter(fn (ProductVariant $variant) => $variant->is_available)
             ->sortBy('price')
             ->first()
@@ -134,7 +167,9 @@ class EliteMobileMarketplaceController extends Controller
 
         return view('elite-mobile-marketplace.product-details', [
             'activeTab' => 'shop', 'productModel' => $product, 'isPreview' => false, 'similarProducts' => $similarProducts,
-            'initialVariantPayload' => $initialVariant ? $this->variantPayload($product, $initialVariant) : null,
+            'initialVariantPayload' => $initialVariant ? $this->variantPayload($product, $initialVariant, $selectedDeviceUnit?->product_variant_id === $initialVariant->id ? $selectedDeviceUnit : null) : null,
+            'selectedDeviceUnit' => $selectedDeviceUnit,
+            'availableDeviceUnits' => $product->variants->flatMap->deviceUnits->where('status', DeviceUnitStatus::Available)->values(),
             'menuCategories' => $this->categoryMenuService->visibleRootCategories(),
             'compatibleAccessories' => $compatibleAccessories,
             'compatibleDevices' => $compatibleDevices,
@@ -212,6 +247,7 @@ class EliteMobileMarketplaceController extends Controller
                     'product_id' => $product->id,
                     'variant_id' => $preview['variant_id'],
                     'installment_months' => $preview['installment_months'],
+                    'device_unit_id' => $preview['device_unit_id'],
                 ]),
                 'preview' => $preview,
             ]);
@@ -229,6 +265,7 @@ class EliteMobileMarketplaceController extends Controller
             // A product may legitimately have a single, optionless variant.
             'option_value_ids' => ['present', 'array'],
             'option_value_ids.*' => ['required', 'integer', 'distinct'],
+            'device_unit_id' => ['nullable', 'integer'],
         ]);
         $optionValueIds = collect($data['option_value_ids'])->map(fn ($id) => (int) $id)->sort()->values()->all();
 
@@ -244,29 +281,40 @@ class EliteMobileMarketplaceController extends Controller
 
         $product->loadMissing(['images', 'installmentPlans' => fn ($plans) => $plans->active()]);
 
-        return response()->json(array_merge(['resolved' => true], $this->variantPayload($product, $variant)));
+        $deviceUnit = filled($data['device_unit_id'] ?? null)
+            ? DeviceUnit::query()->whereKey($data['device_unit_id'])->where('product_variant_id', $variant->id)->available()->with('images')->first()
+            : null;
+        return response()->json(array_merge(['resolved' => true], $this->variantPayload($product, $variant, $deviceUnit)));
     }
 
-    protected function variantPayload(Product $product, \App\Models\ProductVariant $variant): array
+    protected function variantPayload(Product $product, \App\Models\ProductVariant $variant, ?DeviceUnit $deviceUnit = null): array
     {
-        $plans = $this->installmentPlanService->availablePlansForVariant($product, $variant);
+        if ($variant->is_unit_managed) {
+            $deviceUnit = $deviceUnit && $deviceUnit->product_variant_id === $variant->id && $deviceUnit->status === DeviceUnitStatus::Available
+                ? $deviceUnit
+                : $variant->availableDeviceUnits()->with('images')->orderByRaw('COALESCE(selling_price_override_cents, 9223372036854775807)')->first();
+        }
+        $plans = $this->installmentPlanService->availablePlansForVariant($product, $variant, $deviceUnit);
 
-        $images = $this->productImageResolver->resolve($product, $variant);
+        $images = $this->productImageResolver->resolve($product, $variant, $deviceUnit);
+        $price = $deviceUnit?->selling_price ?? (float) $variant->price;
 
         return [
             'variant_id' => $variant->id,
             'sku' => $variant->sku,
-            'price' => (float) $variant->price,
+            'price' => $price,
             'compare_at_price' => $variant->compare_at_price === null ? null : (float) $variant->compare_at_price,
-            'stock_quantity' => $variant->stock_quantity,
+            'stock_quantity' => $variant->available_stock,
             'in_stock' => $variant->is_available,
-            'stock_message' => $variant->is_available ? ($variant->stock_quantity <= 5 ? "Only {$variant->stock_quantity} left in stock." : 'In stock.') : 'Out of stock.',
+            'stock_message' => $variant->is_available ? ($variant->available_stock <= 5 ? "Only {$variant->available_stock} left in stock." : 'In stock.') : 'Out of stock.',
+            'device_unit_id' => $deviceUnit?->id,
+            'device' => $deviceUnit?->publicSnapshot(),
             'images' => $images->map(fn ($image) => [
                 'url' => asset('storage/'.$image->image_path),
                 'alt' => $image->alt_text ?: trim($product->name.' '.$variant->optionValues->pluck('display_name')->filter()->join(' ')),
             ])->values(),
-            'plans' => $plans->map(function ($plan) use ($variant) {
-                $calculated = $this->installmentPlanService->previewFromPayload($plan->toArray(), (float) $variant->price);
+            'plans' => $plans->map(function ($plan) use ($price) {
+                $calculated = $this->installmentPlanService->previewFromPayload($plan->toArray(), $price, null, $price !== (float) $plan->total_amount);
 
                 return [
                     'id' => $plan->id, 'payments' => $plan->number_of_payments, 'interval' => $plan->interval_type,
@@ -280,19 +328,25 @@ class EliteMobileMarketplaceController extends Controller
 
     protected function purchasePreview(Request $request, Product $product): array
     {
-        $data = $request->validate(['variant_id' => ['required', 'integer'], 'plan_id' => ['required', 'integer']]);
-        $product = Product::query()->publiclyAvailable()->with(['variants.optionValues.productOption', 'installmentPlans'])->find($product->id)
+        $data = $request->validate(['variant_id' => ['required', 'integer'], 'plan_id' => ['required', 'integer'], 'device_unit_id' => ['nullable', 'integer']]);
+        $product = Product::query()->publiclyAvailable()->with(['variants.optionValues.productOption', 'variants.deviceUnits', 'installmentPlans'])->find($product->id)
             ?? throw new DomainException('This product is no longer available.');
         $variant = $product->variants->firstWhere('id', (int) $data['variant_id']);
         if (! $variant || ! $variant->is_active) throw new DomainException('The selected variant is no longer available.');
         if (! $variant->is_available) throw new DomainException('Stock changed: this variant is now out of stock.');
-        $plan = $this->installmentPlanService->availablePlansForVariant($product, $variant)->firstWhere('id', (int) $data['plan_id']);
+        $deviceUnit = null;
+        if ($variant->is_unit_managed) {
+            $deviceUnit = $variant->deviceUnits->firstWhere('id', (int) ($data['device_unit_id'] ?? 0));
+            if (! $deviceUnit || $deviceUnit->status !== DeviceUnitStatus::Available) throw new DomainException('This exact device is no longer available.');
+        }
+        $plan = $this->installmentPlanService->availablePlansForVariant($product, $variant, $deviceUnit)->firstWhere('id', (int) $data['plan_id']);
         if (! $plan) throw new DomainException('Plan availability changed. Please select an available installment plan.');
 
-        $calculated = $this->installmentPlanService->previewFromPayload($plan->toArray(), (float) $variant->price, CarbonImmutable::now());
+        $price = $deviceUnit?->selling_price ?? (float) $variant->price;
+        $calculated = $this->installmentPlanService->previewFromPayload($plan->toArray(), $price, CarbonImmutable::now(), $deviceUnit !== null);
         $options = $variant->optionValues->mapWithKeys(fn ($value) => [$value->productOption?->slug => $value->display_name ?: $value->name]);
 
-        return ['product' => $product->name, 'variant_id' => $variant->id, 'option_value_ids' => $variant->optionValues->pluck('id')->sort()->values()->all(), 'variant_price' => $calculated['price'], 'storage' => $options->get('storage'), 'color' => $options->get('color'), 'plan_id' => $plan->id, 'installment_months' => $plan->number_of_payments] + $calculated;
+        return ['product' => $product->name, 'variant_id' => $variant->id, 'device_unit_id' => $deviceUnit?->id, 'device' => $deviceUnit?->publicSnapshot(), 'option_value_ids' => $variant->optionValues->pluck('id')->sort()->values()->all(), 'variant_price' => $calculated['price'], 'storage' => $options->get('storage'), 'color' => $options->get('color'), 'plan_id' => $plan->id, 'installment_months' => $plan->number_of_payments] + $calculated;
     }
 
     // Legacy public URLs now use the database-backed catalog instead of demo fixtures.
@@ -322,7 +376,7 @@ class EliteMobileMarketplaceController extends Controller
         ];
     }
 
-    protected function catalogResponse(Request $request, ?Category $category = null): View
+    protected function catalogResponse(Request $request, ?Category $category = null, ?string $pageTitle = null): View
     {
         $query = Product::query()->publiclyAvailable();
         $categoryIds = $category ? array_merge([$category->id], $category->descendantIds()) : [];
@@ -343,6 +397,16 @@ class EliteMobileMarketplaceController extends Controller
             $query->where(fn ($products) => $products->where('name', 'like', "%{$term}%")->orWhere('brand', 'like', "%{$term}%"));
         }
 
+        $condition = trim((string) $request->input('condition', ''));
+        if ($condition === DeviceConditionType::New->value) {
+            $query->whereHas('variants', fn (Builder $variants) => $variants->available()->where('is_unit_managed', false));
+        } elseif (in_array($condition, [DeviceConditionType::Used->value, DeviceConditionType::Refurbished->value], true)) {
+            $query->whereHas('deviceUnits', fn (Builder $units) => $units->available()->where('condition_type', $condition));
+        }
+        if ($request->filled('grade')) $query->whereHas('deviceUnits', fn (Builder $units) => $units->available()->where('condition_grade', $request->input('grade')));
+        if ($request->filled('battery_min')) $query->whereHas('deviceUnits', fn (Builder $units) => $units->available()->where('battery_health_percent', '>=', (int) $request->input('battery_min')));
+        if ($request->input('warranty') === 'yes') $query->whereHas('deviceUnits', fn (Builder $units) => $units->available()->where(fn ($warranty) => $warranty->where('warranty_days', '>', 0)->orWhere('warranty_until', '>=', today())));
+
         foreach (['brand', 'storage', 'color'] as $filter) {
             $value = trim((string) $request->input($filter, ''));
             if ($value === '') {
@@ -361,7 +425,14 @@ class EliteMobileMarketplaceController extends Controller
 
         foreach (['price_min' => '>=', 'price_max' => '<='] as $input => $operator) {
             if (is_numeric($request->input($input))) {
-                $query->whereHas('variants', fn ($variants) => $variants->available()->where('price', $operator, (float) $request->input($input)));
+                $amount = (float) $request->input($input);
+                if (in_array($condition, [DeviceConditionType::Used->value, DeviceConditionType::Refurbished->value], true)) {
+                    $query->whereHas('deviceUnits', fn (Builder $units) => $units->available()->where('condition_type', $condition)
+                        ->where(fn (Builder $prices) => $prices->where('selling_price_override_cents', $operator, (int) round($amount * 100))
+                            ->orWhere(fn (Builder $fallback) => $fallback->whereNull('selling_price_override_cents')->whereHas('variant', fn (Builder $variant) => $variant->where('price', $operator, $amount)))));
+                } else {
+                    $query->whereHas('variants', fn ($variants) => $variants->available()->where('price', $operator, $amount));
+                }
             }
         }
 
@@ -373,6 +444,9 @@ class EliteMobileMarketplaceController extends Controller
             $count = (int) $request->input('payments');
             $query->whereHas('installmentPlans', fn ($plans) => $plans->active()->where('number_of_payments', $count)
                 ->where(fn ($plans) => $plans->whereNull('product_variant_id')->orWhereHas('variant', fn ($variants) => $variants->available())));
+            if (in_array($condition, [DeviceConditionType::Used->value, DeviceConditionType::Refurbished->value], true)) {
+                $query->whereHas('deviceUnits', fn (Builder $units) => $units->available()->where('condition_type', $condition)->where('installments_enabled', true));
+            }
         }
 
         $sort = $request->input('sort', 'newest');
@@ -388,7 +462,7 @@ class EliteMobileMarketplaceController extends Controller
 
         return view('elite-mobile-marketplace.catalog', array_merge(
             $this->storefrontData($products, $category, $term),
-            ['filterOptions' => $this->filterOptions(), 'childCategories' => $category ? $this->visibleChildren($category) : collect(), 'selectedSort' => $sort]
+            ['filterOptions' => $this->filterOptions(), 'childCategories' => $category ? $this->visibleChildren($category) : collect(), 'selectedSort' => $sort, 'pageTitle' => $pageTitle]
         ));
     }
 
@@ -405,6 +479,8 @@ class EliteMobileMarketplaceController extends Controller
                 ->whereHas('product', fn ($products) => $products->publiclyAvailable())
                 ->where(fn ($plans) => $plans->whereNull('product_variant_id')->orWhereHas('variant', fn ($variants) => $variants->available()))
                 ->distinct()->orderBy('number_of_payments')->pluck('number_of_payments'),
+            'conditions' => DeviceConditionType::cases(),
+            'grades' => \App\Enums\DeviceConditionGrade::cases(),
         ];
     }
 
@@ -425,7 +501,7 @@ class EliteMobileMarketplaceController extends Controller
     {
         return [
             'category:id,name,slug', 'images',
-            'variants' => fn ($query) => $query->available()->with(['optionValues' => fn ($values) => $values->active()->whereHas('productOption', fn ($options) => $options->where('is_active', true))->with('productOption')])->orderBy('price'),
+            'variants' => fn ($query) => $query->available()->with(['deviceUnits' => fn ($units) => $units->available()->with('images'), 'optionValues' => fn ($values) => $values->active()->whereHas('productOption', fn ($options) => $options->where('is_active', true))->with('productOption')])->orderBy('price'),
             'installmentPlans' => fn ($query) => $query->active(),
         ];
     }

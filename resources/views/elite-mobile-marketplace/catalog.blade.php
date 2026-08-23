@@ -1,6 +1,6 @@
 @extends('layouts.elite-mobile-marketplace')
 
-@section('title', $currentCategory?->name ?? ($searchTerm !== '' ? 'Search' : 'Catalog'))
+@section('title', $pageTitle ?? $currentCategory?->name ?? ($searchTerm !== '' ? 'Search' : 'Catalog'))
 
 @section('content')
     <x-public.public-header />
@@ -12,7 +12,7 @@
             <div class="pm-page-masthead__content">
                 <nav aria-label="Breadcrumb"><a href="{{ url('/') }}">Home</a><span>/</span><span>Collection</span></nav>
                 <p class="pm-luxury-kicker">{{ $currentCategory ? 'Curated category' : ($searchTerm !== '' ? 'Your search' : 'The complete collection') }}</p>
-                <h1>{{ $currentCategory?->name ?? ($searchTerm !== '' ? 'Results for “'.$searchTerm.'”' : 'Objects of desire, made for every day.') }}</h1>
+                <h1>{{ $pageTitle ?? $currentCategory?->name ?? ($searchTerm !== '' ? 'Results for “'.$searchTerm.'”' : 'Objects of desire, made for every day.') }}</h1>
                 <p class="pm-page-masthead__description">{{ $currentCategory?->description ?: ($searchTerm !== '' ? 'A considered edit of products matching your search.' : 'Explore refined technology selected for performance, design, and a more effortless everyday experience.') }}</p>
             </div>
             <div class="pm-page-masthead__monogram" aria-hidden="true"><span>{{ $currentCategory ? mb_substr($currentCategory->name, 0, 1) : 'T' }}</span><small>TAQQSIT<br>COLLECTION</small></div>
@@ -31,6 +31,9 @@
                     <label>Search<input name="q" value="{{ request('q') }}" placeholder="Model or brand" class="pm-form-control"></label>
                     <label>Category<select name="category" class="pm-form-control"><option value="">All categories</option>@foreach($filterOptions['categories'] as $option)<option value="{{ $option->slug }}" @selected(request('category') === $option->slug)>{{ $option->name }}</option>@endforeach</select></label>
                     @if($filterOptions['brands']->isNotEmpty())<label>Maison / brand<select name="brand" class="pm-form-control"><option value="">All brands</option>@foreach($filterOptions['brands'] as $brand)<option value="{{ $brand }}" @selected(request('brand') === $brand)>{{ $brand }}</option>@endforeach</select></label>@endif
+                    <label>Condition<select name="condition" class="pm-form-control"><option value="">All conditions</option>@foreach($filterOptions['conditions'] as $option)<option value="{{ $option->value }}" @selected(request('condition') === $option->value)>{{ $option->label() }}</option>@endforeach</select></label>
+                    <div class="pm-filter-pair"><label>Grade<select name="grade" class="pm-form-control"><option value="">Any</option>@foreach($filterOptions['grades'] as $option)<option value="{{ $option->value }}" @selected(request('grade') === $option->value)>{{ $option->label() }}</option>@endforeach</select></label><label>Battery health<select name="battery_min" class="pm-form-control"><option value="">Any</option>@foreach([90,85,80] as $level)<option value="{{ $level }}" @selected((string)request('battery_min') === (string)$level)>{{ $level }}%+</option>@endforeach</select></label></div>
+                    <label>Warranty<select name="warranty" class="pm-form-control"><option value="">Any</option><option value="yes" @selected(request('warranty') === 'yes')>With warranty</option></select></label>
                     <div class="pm-filter-pair"><label>Storage<select name="storage" class="pm-form-control"><option value="">All</option>@foreach($filterOptions['storage'] as $value)<option value="{{ $value }}" @selected(request('storage') === $value)>{{ $value }}</option>@endforeach</select></label><label>Color<select name="color" class="pm-form-control"><option value="">All</option>@foreach($filterOptions['color'] as $value)<option value="{{ $value }}" @selected(request('color') === $value)>{{ $value }}</option>@endforeach</select></label></div>
                     <label>Price range<div class="pm-filter-pair"><input name="price_min" value="{{ request('price_min') }}" inputmode="decimal" placeholder="Minimum" class="pm-form-control"><input name="price_max" value="{{ request('price_max') }}" inputmode="decimal" placeholder="Maximum" class="pm-form-control"></div></label>
                     <label>Payment plan<select name="payments" class="pm-form-control"><option value="">Any schedule</option>@foreach($filterOptions['payments'] as $count)<option value="{{ $count }}" @selected((string)request('payments') === (string)$count)>{{ $count }} payments</option>@endforeach</select></label>

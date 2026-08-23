@@ -93,7 +93,7 @@ if (root) {
         const resolve = async () => {
             const ids = [selected.storage, selected.color].filter(Boolean);
             if ((data.storageValues.length && !selected.storage) || (data.colorValues.length && !selected.color)) return;
-            try { const result = await request(data.resolveUrl, { option_value_ids: ids }); if (!result.resolved) throw new Error(result.message); applyPayload(result); }
+            try { const result = await request(data.resolveUrl, { option_value_ids: ids, device_unit_id: data.deviceUnitId }); if (!result.resolved) throw new Error(result.message); applyPayload(result); }
             catch (error) { $('[data-status]').textContent = error.message; paymentState(); }
         };
         const choose = (type, id) => {
@@ -117,12 +117,13 @@ if (root) {
                     const applicationUrl = new URL(data.applicationUrl, window.location.origin);
                     applicationUrl.searchParams.set('product_id', data.productId);
                     applicationUrl.searchParams.set('variant_id', payload.variant_id);
+                    if (payload.device_unit_id) applicationUrl.searchParams.set('device_unit_id', payload.device_unit_id);
                     window.location.assign(applicationUrl);
                     return;
                 }
                 // Validate the chosen variant and plan once more on the server,
                 // then carry the selected device into the application form.
-                const result = await request(data.confirmUrl, { variant_id: payload.variant_id, plan_id: selectedPlan.id });
+                const result = await request(data.confirmUrl, { variant_id: payload.variant_id, plan_id: selectedPlan.id, device_unit_id: payload.device_unit_id });
                 if (!result.application_url) throw new Error('Unable to continue to the installment application. Please try again.');
                 window.location.assign(result.application_url);
             } catch (error) {
@@ -135,7 +136,7 @@ if (root) {
             if (!preview) return;
             confirmPurchaseButton.disabled = true;
             try {
-                const result = await request(data.confirmUrl, { variant_id: preview.variant_id, plan_id: preview.plan_id });
+                const result = await request(data.confirmUrl, { variant_id: preview.variant_id, plan_id: preview.plan_id, device_unit_id: preview.device_unit_id });
                 if (!result.application_url) throw new Error('Unable to continue to the installment application. Please try again.');
                 window.location.assign(result.application_url);
             } catch (error) {

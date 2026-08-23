@@ -163,6 +163,9 @@ class PosCheckoutService
 
     private function assertSellable(ProductVariant $variant, int $quantity): void
     {
+        if ($variant->is_unit_managed) {
+            throw new DomainException("{$variant->sku} is exact-device inventory and must be sold by selecting its physical device unit.");
+        }
         if (! $variant->is_active) {
             throw new DomainException("{$variant->sku} is inactive and cannot be sold.");
         }

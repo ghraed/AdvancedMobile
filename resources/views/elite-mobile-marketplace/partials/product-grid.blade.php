@@ -11,21 +11,25 @@
     <div class="pm-product-grid grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
         @foreach ($products as $product)
             @php($variants = $product->variants)
-            @php($availableStock = (int) $variants->sum('stock_quantity'))
-            @php($minPrice = $variants->min('price'))
-            @php($maxPrice = $variants->max('price'))
-            @php($image = $product->images->first())
+            @php($units = $variants->flatMap->deviceUnits->where('status', \App\Enums\DeviceUnitStatus::Available)->values())
+            @php($availableStock = (int) $variants->sum(fn ($variant) => $variant->available_stock))
+            @php($unitPrices = $units->map->selling_price)
+            @php($minPrice = $unitPrices->isNotEmpty() ? $unitPrices->min() : $variants->min('price'))
+            @php($maxPrice = $unitPrices->isNotEmpty() ? $unitPrices->max() : $variants->max('price'))
+            @php($featuredUnit = $units->sortBy('selling_price_cents')->first())
+            @php($image = $featuredUnit?->images?->first() ?? $product->images->first())
             @php($storage = $variants->flatMap(fn ($variant) => $variant->optionValues->filter(fn ($value) => $value->productOption?->slug === 'storage'))->unique('id'))
             @php($colors = $variants->flatMap(fn ($variant) => $variant->optionValues->filter(fn ($value) => $value->productOption?->slug === 'color'))->unique('id')->sortBy('sort_order')->values())
             @php($primaryColor = $colors->first())
-            @php($plans = $product->installmentPlans->filter(fn ($plan) => $plan->is_active && (!$plan->product_variant_id || $variants->contains('id', $plan->product_variant_id))))
+            @php($plans = $product->installmentPlans->filter(fn ($plan) => $plan->is_active && (!$featuredUnit || $featuredUnit->installments_enabled) && (!$plan->product_variant_id || $variants->contains('id', $plan->product_variant_id))))
             @php($plan = $plans->sortBy('installment_amount')->first())
             @php($hasLimitedOffer = ($showOfferBadges ?? false) && $product->offer_ends_at?->isFuture() && $variants->contains(fn ($variant) => $variant->compare_at_price && $variant->compare_at_price > $variant->price))
             <article class="pm-product-card group">
-                <a href="{{ route('products.show', $product) }}" class="block">
+                <a href="{{ $featuredUnit ? route('device-units.show', [$product, $featuredUnit]) : route('products.show', $product) }}" class="block">
                     <div class="pm-product-media">
                         @if($availableStock <= 5)<span class="pm-stock-badge pm-stock-badge--low">{{ __('storefront.only_left', ['count' => $availableStock]) }}</span>@else<span class="pm-stock-badge">{{ __('storefront.in_stock') }}</span>@endif
                         @if($hasLimitedOffer)<span class="pm-offer-badge">Offer ends {{ $product->offer_ends_at->format('M j') }}</span>@endif
+                        @if($featuredUnit)<span class="pm-offer-badge" style="top:2.6rem">{{ $featuredUnit->condition_type->label() }} · {{ strtoupper($featuredUnit->condition_grade?->value ?? '') }}</span>@endif
                         @if ($image)
                             <img src="{{ asset('storage/'.$image->image_path) }}" alt="{{ $image->alt_text ?: $product->name }}" class="h-full w-full object-contain transition duration-300 group-hover:scale-105">
                         @else
@@ -35,6 +39,7 @@
                     <div class="pm-product-body">
                         @if($product->brand)<p class="pm-product-brand">{{ $product->brand }}</p>@endif
                         <h3 class="pm-product-title">{{ $product->name }}</h3>
+                        @if($featuredUnit)<p class="mt-1 text-xs font-bold">Battery {{ $featuredUnit->battery_health_percent === null ? 'not reported' : $featuredUnit->battery_health_percent.'%' }} · {{ $featuredUnit->warranty_label }}</p>@endif
                         <p class="mt-2 truncate text-xs text-slate-500">{{ $storage->first()?->display_name ?: 'Standard' }} · {{ data_get($product->specifications, 'Connectivity', '5G') }} · {{ data_get($product->specifications, 'SIM', 'Dual SIM') }}</p>
                         <div class="mt-4 flex items-end justify-between gap-2"><p class="pm-product-price">${{ number_format((float) $minPrice, 0) }}@if((float)$minPrice !== (float)$maxPrice)–${{ number_format((float)$maxPrice, 0) }}@endif</p>@if($plan)<p class="text-right text-[11px] font-bold leading-4 text-[var(--pm-secondary)]">From {{ number_format((float) $plan->installment_amount, 2) }} × {{ $plan->number_of_payments }}</p>@endif</div>
                         <span class="pm-button pm-button--accent pm-product-cta mt-4 w-full justify-center px-3 py-2.5 text-sm">View options</span>

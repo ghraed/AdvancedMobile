@@ -574,7 +574,7 @@ class ProductCatalogService
                 'price' => $row['price'],
                 'compare_at_price' => $row['compare_at_price'],
                 'cost_price_cents' => $row['cost_price_cents'],
-                'stock_quantity' => $row['stock_quantity'],
+                'stock_quantity' => $variant->is_unit_managed ? $variant->availableDeviceUnits()->count() : $row['stock_quantity'],
                 'is_active' => (bool) ($row['is_active'] ?? true),
                 'option_signature' => ProductVariant::buildOptionSignature($selectedValueIds),
             ]);

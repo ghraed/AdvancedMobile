@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\InstallmentPlan;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\DeviceUnit;
 use Carbon\CarbonImmutable;
 use DomainException;
 
@@ -68,10 +69,10 @@ class InstallmentPlanService
         );
     }
 
-    public function previewFromPayload(array $plan, float $price, ?CarbonImmutable $startingAt = null): array
+    public function previewFromPayload(array $plan, float $price, ?CarbonImmutable $startingAt = null, bool $forceCashPrice = false): array
     {
         return $this->resolvePlanPayload(
-            (float) ($plan['total_amount'] ?? $price),
+            $forceCashPrice ? $price : (float) ($plan['total_amount'] ?? $price),
             (int) ($plan['number_of_payments'] ?? 0),
             0,
             0,
@@ -103,8 +104,9 @@ class InstallmentPlanService
     }
 
     /** The visitor can only select active plans applicable to their exact variant. */
-    public function availablePlansForVariant(Product $product, ProductVariant $variant)
+    public function availablePlansForVariant(Product $product, ProductVariant $variant, ?DeviceUnit $deviceUnit = null)
     {
+        if ($deviceUnit && ! $deviceUnit->installments_enabled) return collect();
         $variantPlans = $variant->relationLoaded('installmentPlans')
             ? $variant->installmentPlans->where('is_active', true)
             : $variant->installmentPlans()->active()->get();

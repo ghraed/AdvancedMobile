@@ -6,7 +6,7 @@
     $activeVariants = $catalogProduct->variants->filter(fn ($variant) => $variant->is_active)->values();
     $storageValues = $activeVariants->flatMap(fn ($variant) => $variant->optionValues->filter(fn ($value) => $value->productOption?->slug === ProductOption::STORAGE_SLUG))->unique('id')->sortBy('sort_order')->values();
     $colorValues = $activeVariants->flatMap(fn ($variant) => $variant->optionValues->filter(fn ($value) => $value->productOption?->slug === ProductOption::COLOR_SLUG))->unique('id')->sortBy('sort_order')->values();
-    $initial = $activeVariants->filter(fn ($variant) => $variant->is_available)->sortBy('price')->first() ?? $activeVariants->sortBy('price')->first();
+    $initial = ($selectedDeviceUnit ?? null)?->variant ?? $activeVariants->filter(fn ($variant) => $variant->is_available)->sortBy('price')->first() ?? $activeVariants->sortBy('price')->first();
     $imageUrl = fn ($image) => asset('storage/'.$image->image_path);
     $variantData = $activeVariants->map(fn ($variant) => [
         'id' => $variant->id,
@@ -22,6 +22,7 @@
         'colorValues' => $colorValues->map(fn ($value) => ['id' => $value->id, 'name' => $value->display_name ?: $value->name, 'hex' => $value->hex_value, 'image' => $value->swatch_image ? $imageUrl((object) ['image_path' => $value->swatch_image]) : null])->values(),
         'initialIds' => $initialIds,
         'initialPayload' => $initialVariantPayload ?? null,
+        'deviceUnitId' => ($selectedDeviceUnit ?? null)?->id,
         'fallbackImages' => $fallbackImages,
         'primaryColor' => $initial?->color_option?->hex_value ?: '#2563eb',
         // Keep these same-origin. An absolute URL built from APP_URL can point at
@@ -62,7 +63,19 @@
                 @if($catalogProduct->brand)<p class="pm-product-brand">{{ $catalogProduct->brand }}</p>@endif
                 <h1>{{ $catalogProduct->name }}</h1>
                 @if($catalogProduct->short_description)<p class="pm-purchase-panel__intro">{{ $catalogProduct->short_description }}</p>@endif
-                <div class="pm-purchase-panel__price"><div><span>From</span><p data-price>{{ $initial ? '$'.number_format((float) $initial->price, 2) : 'Unavailable' }}</p><p data-compare-price>@if($initial?->compare_at_price) Was ${{ number_format((float) $initial->compare_at_price, 2) }} @endif</p></div><div class="pm-availability"><span></span><p data-stock class="{{ $initial?->is_available ? 'text-emerald-700' : 'text-red-700' }}" aria-live="polite">{{ $initial ? ($initial->is_available ? ($initial->stock_quantity <= 5 ? 'Only '.$initial->stock_quantity.' left in stock.' : 'In stock.') : 'Out of stock.') : '' }}</p></div></div><p data-status class="mt-2 text-sm text-[var(--pm-danger)]" aria-live="polite"></p>
+                @if($selectedDeviceUnit ?? null)
+                    <section class="mt-5 rounded-2xl border border-[var(--pm-border)] bg-[var(--pm-surface-soft)] p-4" data-device-condition>
+                        <div class="flex flex-wrap items-center gap-2"><strong>{{ $selectedDeviceUnit->condition_type->label() }}</strong><span>·</span><strong>{{ $selectedDeviceUnit->condition_grade?->label() }}</strong><span>·</span><span>{{ $selectedDeviceUnit->masked_imei }}</span></div>
+                        <dl class="mt-3 grid grid-cols-2 gap-3 text-sm"><div><dt class="text-slate-500">Battery health</dt><dd class="font-bold">{{ $selectedDeviceUnit->battery_health_percent === null ? 'Not reported' : $selectedDeviceUnit->battery_health_percent.'%' }}</dd></div><div><dt class="text-slate-500">Warranty</dt><dd class="font-bold">{{ $selectedDeviceUnit->warranty_label }}</dd></div></dl>
+                        @if($selectedDeviceUnit->customer_visible_condition_notes)<p class="mt-3 text-sm">{{ $selectedDeviceUnit->customer_visible_condition_notes }}</p>@endif
+                        @if($selectedDeviceUnit->known_defects)<div class="mt-3"><strong class="text-sm text-red-800">Known defects</strong><ul class="mt-1 list-disc pl-5 text-sm">@foreach($selectedDeviceUnit->known_defects as $defect)<li>{{ $defect }}</li>@endforeach</ul></div>@endif
+                    </section>
+                @endif
+                <div class="pm-purchase-panel__price"><div><span>From</span><p data-price>{{ $initial ? '$'.number_format(($selectedDeviceUnit ?? null)?->selling_price ?? (float) $initial->price, 2) : 'Unavailable' }}</p><p data-compare-price>@if($initial?->compare_at_price) Was ${{ number_format((float) $initial->compare_at_price, 2) }} @endif</p></div><div class="pm-availability"><span></span><p data-stock class="{{ $initial?->is_available ? 'text-emerald-700' : 'text-red-700' }}" aria-live="polite">{{ $initial ? ($initial->is_available ? ($initial->available_stock <= 5 ? 'Only '.$initial->available_stock.' left in stock.' : 'In stock.') : 'Out of stock.') : '' }}</p></div></div><p data-status class="mt-2 text-sm text-[var(--pm-danger)]" aria-live="polite"></p>
+
+                @if(($availableDeviceUnits ?? collect())->count() > 1)
+                    <section class="mt-5"><h2 class="font-extrabold">Choose the exact device</h2><div class="mt-2 grid gap-2">@foreach($availableDeviceUnits as $unit)<a href="{{ route('device-units.show', [$catalogProduct, $unit]) }}" class="rounded-xl border p-3 text-sm {{ ($selectedDeviceUnit ?? null)?->id === $unit->id ? 'border-[var(--pm-primary)] bg-blue-50' : 'border-[var(--pm-border)]' }}"><strong>{{ $unit->condition_grade?->label() }}</strong> · Battery {{ $unit->battery_health_percent ?? '—' }}% · ${{ number_format($unit->selling_price, 2) }}<span class="block text-xs">{{ $unit->masked_imei }}</span></a>@endforeach</div></section>
+                @endif
 
                 <section class="pm-option-studio">
                     @if($storageValues->isNotEmpty())<fieldset><div class="flex items-center justify-between gap-3"><legend class="font-extrabold text-[var(--pm-text)]">Storage</legend><span data-selected-storage class="text-sm font-bold text-[var(--pm-text-muted)]">{{ $initial?->storage_option?->display_name }}</span></div><div data-storage-options class="mt-3 grid grid-cols-3 gap-2">@foreach($storageValues as $value)<button type="button" disabled class="rounded-xl border border-[var(--pm-border)] bg-white px-2 py-3 text-sm font-bold text-[var(--pm-text)]">{{ $value->display_name ?: $value->name }}</button>@endforeach</div></fieldset>@endif
@@ -83,6 +96,16 @@
             <section class="pm-product-story">
                 <div><p class="pm-luxury-kicker">The experience</p><h2>More than specifications.<br>A better everyday.</h2></div>
                 <article><span class="pm-product-story__quote">“</span><p>{!! nl2br(e($catalogProduct->description)) !!}</p></article>
+            </section>
+        @endif
+        @if($selectedDeviceUnit ?? null)
+            <section class="pm-specification-suite" aria-labelledby="device-inspection"><div class="pm-editorial-heading"><p>Exact device inspection</p><h2 id="device-inspection">Condition, function, and contents.</h2></div>
+                <dl>
+                    @foreach($selectedDeviceUnit->condition_checklist ?? [] as $part => $state)<div><dt>{{ str($part)->replace('_', ' ')->headline() }}</dt><dd>{{ str($state)->replace('_', ' ')->headline() }}</dd><span class="material-symbols-outlined">{{ $state === 'fault' ? 'warning' : 'check' }}</span></div>@endforeach
+                    @if($selectedDeviceUnit->included_accessories)<div><dt>Included accessories</dt><dd>{{ collect($selectedDeviceUnit->included_accessories)->map(fn($v) => str($v)->replace('_', ' ')->headline())->join(', ') }}</dd><span class="material-symbols-outlined">inventory_2</span></div>@endif
+                    @if($selectedDeviceUnit->customer_visible_refurbishment_details)<div><dt>Refurbishment</dt><dd>{{ $selectedDeviceUnit->customer_visible_refurbishment_details }}</dd><span class="material-symbols-outlined">build</span></div>@endif
+                    @if($selectedDeviceUnit->parts_replaced)<div><dt>Parts replaced</dt><dd>{{ implode(', ', $selectedDeviceUnit->parts_replaced) }}</dd><span class="material-symbols-outlined">published_with_changes</span></div>@endif
+                </dl>
             </section>
         @endif
         @if($specifications->isNotEmpty())

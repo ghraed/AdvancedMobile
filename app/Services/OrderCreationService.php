@@ -8,6 +8,9 @@ use App\Models\PendingPurchaseSession;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Models\DeviceUnit;
+use App\Enums\DeviceUnitStatus;
+use App\Enums\ProductStatus;
 use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +18,7 @@ use Illuminate\Support\Str;
 
 class OrderCreationService
 {
-    public function __construct(protected InstallmentPlanService $plans) {}
+    public function __construct(protected InstallmentPlanService $plans, protected DeviceInventoryService $inventory) {}
 
     /**
      * Creates one immutable order from a pending selection. All pricing and stock
@@ -41,13 +44,19 @@ class OrderCreationService
                 throw new DomainException('This saved purchase has already been completed.');
             }
 
-            $product = Product::query()->publiclyAvailable()->with('category')->whereKey($pending->product_id)->lockForUpdate()->first()
+            $product = Product::query()->where('status', ProductStatus::Active)->whereHas('category', fn ($q) => $q->where('is_active', true))->with('category')->whereKey($pending->product_id)->lockForUpdate()->first()
                 ?? throw new DomainException('This product is no longer available.');
             $variant = ProductVariant::query()->whereKey($pending->product_variant_id)->where('product_id', $product->id)->lockForUpdate()->first();
             if (! $variant || ! $variant->is_active) {
                 throw new DomainException('The selected variant is no longer available.');
             }
-            if ($variant->stock_quantity < 1) {
+            $deviceUnit = null;
+            if ($pending->device_unit_id) {
+                $deviceUnit = DeviceUnit::query()->whereKey($pending->device_unit_id)->where('product_variant_id', $variant->id)->lockForUpdate()->first();
+                if (! $deviceUnit || $deviceUnit->status !== DeviceUnitStatus::Reserved || ! hash_equals((string) $deviceUnit->reservation_token_hash, hash('sha256', $token)) || $deviceUnit->reserved_until?->isPast()) {
+                    throw new DomainException('This exact device is no longer reserved for your session.');
+                }
+            } elseif ($variant->stock_quantity < 1) {
                 throw new DomainException('Stock changed: this variant is now out of stock.');
             }
 
@@ -73,26 +82,31 @@ class OrderCreationService
             if (! $plan) {
                 throw new DomainException('Plan availability changed. Please select an available installment plan.');
             }
+            if ($deviceUnit && ! $deviceUnit->installments_enabled) throw new DomainException('Installments are not available for this device.');
 
             // Monetary values are recalculated under locks, while the confirmed
             // payment dates remain anchored to the original selection.
             $scheduledAt = $pending->scheduled_at ?? CarbonImmutable::now();
-            $preview = $this->plans->previewFromPayload($plan->toArray(), (float) $variant->price, $scheduledAt);
+            $price = $deviceUnit?->selling_price ?? (float) $variant->price;
+            $preview = $this->plans->previewFromPayload($plan->toArray(), $price, $scheduledAt, $deviceUnit !== null);
             $options = $variant->optionValues->mapWithKeys(fn ($value) => [$value->productOption?->slug => $value->display_name ?: $value->name]);
             $order = Order::create([
                 'reference' => $this->reference(), 'sales_channel' => 'online', 'user_id' => $user->id, 'pending_purchase_session_id' => $pending->id,
                 'product_id' => $product->id, 'product_variant_id' => $variant->id, 'installment_plan_id' => $plan->id,
                 'quantity' => 1, 'status' => 'pending', 'product_name' => $product->name, 'sku' => $variant->sku,
                 'storage' => $options->get('storage'), 'color' => $options->get('color'),
-                'variant_price' => $variant->price, 'financing_fee' => $preview['financing_fee'],
+                'variant_price' => $price, 'financing_fee' => $preview['financing_fee'],
                 'amount_due_today' => $preview['amount_due_now'], 'total_financed_amount' => $preview['total_financed_amount'],
                 'total_amount' => $preview['total_amount'], 'future_payment_count' => $preview['future_payment_count'],
                 'interval_type' => $preview['interval_type'], 'customer_snapshot' => ['name' => $user->name, 'email' => $user->email],
             ]);
-            $unitPriceCents = $this->decimalToCents((string) $variant->price);
+            $unitPriceCents = $deviceUnit?->selling_price_cents ?? $this->decimalToCents((string) $variant->price);
+            $deviceSnapshot = $deviceUnit?->publicSnapshot();
+            if ($deviceSnapshot && $deviceUnit->warranty_days) $deviceSnapshot['warranty_sale_until'] = $scheduledAt->addDays($deviceUnit->warranty_days)->toDateString();
             $order->items()->create([
                 'product_id' => $product->id,
                 'product_variant_id' => $variant->id,
+                'device_unit_id' => $deviceUnit?->id,
                 'category_id' => $product->category_id,
                 'product_name' => $product->name,
                 'brand' => $product->brand,
@@ -100,8 +114,9 @@ class OrderCreationService
                 'sku' => $variant->sku,
                 'barcode' => $variant->barcode,
                 'variant_options' => $options->all(),
+                'device_snapshot' => $deviceSnapshot,
                 'unit_price_cents' => $unitPriceCents,
-                'unit_cost_cents' => $variant->cost_price_cents,
+                'unit_cost_cents' => $deviceUnit?->acquisition_cost_cents ?? $variant->cost_price_cents,
                 'quantity' => 1,
                 'subtotal_cents' => $unitPriceCents,
                 'discount_cents' => 0,
@@ -117,7 +132,8 @@ class OrderCreationService
             }
 
             // This storefront's order policy is immediate stock deduction, guarded by the variant lock.
-            $variant->decrement('stock_quantity');
+            if ($deviceUnit) $this->inventory->markSold($deviceUnit, $user);
+            else $variant->decrement('stock_quantity');
             $pending->forceFill(['user_id' => $user->id, 'completed_at' => now()])->save();
 
             return $order->load('installments');
