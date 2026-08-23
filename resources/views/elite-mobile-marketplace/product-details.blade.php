@@ -1,5 +1,6 @@
 @php
     use App\Models\ProductOption;
+    use App\Enums\ProductType;
 
     $catalogProduct = $productModel;
     $activeVariants = $catalogProduct->variants->filter(fn ($variant) => $variant->is_active)->values();
@@ -29,6 +30,7 @@
         'previewUrl' => route('products.purchase-preview', $catalogProduct, false),
         'confirmUrl' => route('products.confirm-purchase', $catalogProduct, false),
         'applicationUrl' => route('installments.create', [], false),
+        'compatibilityCheckUrl' => $catalogProduct->product_type === ProductType::Accessory ? route('products.check-compatibility', $catalogProduct, false) : null,
     ];
     $specifications = collect($catalogProduct->specifications ?? []);
     $whatsAppShareUrl = 'https://wa.me/?text='.rawurlencode('Check out '.$catalogProduct->name.': '.route('products.show', $catalogProduct));
@@ -85,6 +87,46 @@
         @endif
         @if($specifications->isNotEmpty())
             <section class="pm-specification-suite" aria-labelledby="product-specifications"><div class="pm-editorial-heading"><p>Inside the device</p><h2 id="product-specifications">Specifications, beautifully considered.</h2></div><dl>@foreach($specifications as $key => $specification) @php($label = is_array($specification) ? ($specification['key'] ?? 'Specification') : $key) @php($value = is_array($specification) ? ($specification['value'] ?? '') : $specification)<div><dt>{{ $label }}</dt><dd>{{ $value }}</dd><span class="material-symbols-outlined">check</span></div>@endforeach</dl></section>
+        @endif
+        @if($catalogProduct->product_type === ProductType::Device)
+            <section class="pm-collection-section" aria-labelledby="compatible-accessories-title">
+                <div class="pm-section-head"><div><p>Verified matches</p><h2 id="compatible-accessories-title">Compatible Accessories</h2></div><a class="pm-editorial-link" href="{{ route('accessories.compatible', ['device' => $catalogProduct->id]) }}">View all <span class="material-symbols-outlined">arrow_forward</span></a></div>
+                @foreach(['case', 'screen_protector', 'charger', 'cable', 'power_bank', 'wireless_charger', 'headphones', 'adapter', 'other'] as $subtype)
+                    @if(($compatibleAccessories[$subtype] ?? collect())->isNotEmpty())
+                        <div class="mb-8" data-compatibility-group="{{ $subtype }}">
+                            <h3 class="mb-3 text-lg font-black">{{ str($subtype)->headline()->plural() }}</h3>
+                            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                @foreach($compatibleAccessories[$subtype] as $match)
+                                    <a href="{{ route('products.show', $match['product']) }}" class="rounded-2xl border border-[var(--pm-border)] bg-white p-4 transition hover:border-[var(--pm-primary)]"><strong class="block">{{ $match['product']->name }}</strong><span class="mt-1 block text-sm text-[var(--pm-text-muted)]">{{ $match['reason'] }}</span></a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                @endforeach
+                @if(($compatibleAccessories ?? collect())->isEmpty())<p class="text-[var(--pm-text-muted)]">No compatible in-stock accessories are published yet.</p>@endif
+            </section>
+        @endif
+        @if($catalogProduct->product_type === ProductType::Accessory)
+            <section class="pm-collection-section" aria-labelledby="compatible-devices-title">
+                <div class="pm-section-head"><div><p>Device compatibility</p><h2 id="compatible-devices-title">Compatible With</h2></div></div>
+                @if(($compatibleDevices ?? collect())->isNotEmpty())
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach($compatibleDevices as $match)
+                            <a href="{{ route('products.show', $match['product']) }}" class="rounded-2xl border border-[var(--pm-border)] bg-white p-4"><strong class="block">{{ $match['product']->name }}</strong><span class="mt-1 block text-sm text-[var(--pm-text-muted)]">{{ $match['reason'] }}</span></a>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-[var(--pm-text-muted)]">No confirmed compatible devices are published yet.</p>
+                @endif
+                <div class="mt-8 max-w-2xl rounded-2xl border border-[var(--pm-border)] bg-white p-5" data-compatibility-checker>
+                    <h3 class="text-lg font-black">Check compatibility with your phone</h3>
+                    <label class="mt-4 block text-sm font-bold" for="compatibility-device">Choose a device</label>
+                    <select id="compatibility-device" data-compatibility-device class="pm-form-control mt-1"><option value="">Select your phone</option>@foreach(($compatibilityCheckerDevices ?? collect()) as $device)<option value="{{ $device->id }}">{{ trim($device->brand.' '.$device->name) }}</option>@endforeach</select>
+                    <button type="button" data-check-compatibility class="pm-button pm-button--accent mt-3">Check compatibility</button>
+                    <p data-compatibility-result class="mt-3 font-bold" aria-live="polite"></p>
+                    <p data-compatibility-reason class="mt-1 text-sm text-[var(--pm-text-muted)]"></p>
+                </div>
+            </section>
         @endif
         @if(($similarProducts ?? collect())->isNotEmpty())<section class="pm-collection-section" aria-labelledby="similar-products"><div class="pm-section-head"><div><p>Continue exploring · Similar products</p><h2 id="similar-products">You may also like</h2></div><a href="{{ route('catalog.index', ['category' => $catalogProduct->category?->slug]) }}" class="pm-editorial-link">Explore category <span class="material-symbols-outlined">arrow_forward</span></a></div>@include('elite-mobile-marketplace.partials.product-grid', ['products' => $similarProducts])</section>@endif
     </main>

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\ProductStatus;
+use App\Enums\AccessorySubtype;
+use App\Enums\ProductType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductRequest;
 use App\Models\Category;
@@ -128,6 +130,10 @@ class ProductController extends Controller
             'images.optionValue',
             'variants.images',
             'variants.optionValues.productOption',
+            'deviceProfile',
+            'compatibilityRules',
+            'exactCompatibleDevices',
+            'compatibilityExclusions',
         ]);
 
         return view('admin.products.edit', $this->formData($product));
@@ -184,6 +190,10 @@ class ProductController extends Controller
             'variants.images',
             'variants.optionValues.productOption',
             'installmentPlans',
+            'deviceProfile',
+            'compatibilityRules',
+            'exactCompatibleDevices',
+            'compatibilityExclusions',
         ]);
 
         return view('elite-mobile-marketplace.product-details', [
@@ -245,6 +255,12 @@ class ProductController extends Controller
     {
         return [
             'product' => $product,
+            'productTypes' => ProductType::cases(),
+            'accessorySubtypes' => AccessorySubtype::cases(),
+            'deviceProducts' => Product::query()
+                ->where('product_type', ProductType::Device->value)
+                ->when($product->exists, fn (Builder $query) => $query->whereKeyNot($product->id))
+                ->orderBy('brand')->orderBy('name')->get(['id', 'brand', 'name']),
             'categories' => Category::query()->ordered()->get(['id', 'parent_id', 'name', 'is_active']),
             'categoryOptions' => $this->flattenCategoryOptions(Category::query()->ordered()->get()),
             'optionDefinitions' => [

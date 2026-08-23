@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AccessorySubtype;
+use App\Enums\ProductType;
 use App\Models\Category;
 use App\Models\InstallmentPlan;
 use App\Models\Product;
@@ -10,10 +12,12 @@ use App\Models\ProductVariant;
 use App\Services\CategoryMenuService;
 use App\Services\InstallmentPlanService;
 use App\Services\ProductImageResolver;
+use App\Services\AccessoryCompatibilityService;
 use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 
 class EliteMobileMarketplaceController extends Controller
@@ -22,6 +26,7 @@ class EliteMobileMarketplaceController extends Controller
         protected CategoryMenuService $categoryMenuService,
         protected InstallmentPlanService $installmentPlanService,
         protected ProductImageResolver $productImageResolver,
+        protected AccessoryCompatibilityService $accessoryCompatibilityService,
     ) {}
 
     public function home(): View
@@ -112,10 +117,76 @@ class EliteMobileMarketplaceController extends Controller
             ->first()
             ?? $product->variants->filter(fn (ProductVariant $variant) => $variant->is_active)->sortBy('price')->first();
 
+        $compatibleAccessories = collect();
+        $compatibleDevices = collect();
+        $checkerDevices = collect();
+
+        if ($product->product_type === ProductType::Device) {
+            $compatibleAccessories = $this->accessoryCompatibilityService
+                ->compatibleAccessoriesForDevice($product)
+                ->groupBy(fn (array $match) => $match['product']->accessory_subtype?->value ?? AccessorySubtype::Other->value);
+        } elseif ($product->product_type === ProductType::Accessory) {
+            $compatibleDevices = $this->accessoryCompatibilityService->compatibleDevicesForAccessory($product);
+            $checkerDevices = Product::query()->publiclyAvailable()
+                ->where('product_type', ProductType::Device->value)
+                ->orderBy('brand')->orderBy('name')->get(['id', 'brand', 'name']);
+        }
+
         return view('elite-mobile-marketplace.product-details', [
             'activeTab' => 'shop', 'productModel' => $product, 'isPreview' => false, 'similarProducts' => $similarProducts,
             'initialVariantPayload' => $initialVariant ? $this->variantPayload($product, $initialVariant) : null,
             'menuCategories' => $this->categoryMenuService->visibleRootCategories(),
+            'compatibleAccessories' => $compatibleAccessories,
+            'compatibleDevices' => $compatibleDevices,
+            'compatibilityCheckerDevices' => $checkerDevices,
+        ]);
+    }
+
+    public function checkCompatibility(Request $request, Product $product): JsonResponse
+    {
+        abort_unless($product->product_type === ProductType::Accessory
+            && Product::query()->whereKey($product->id)->publiclyAvailable()->exists(), 404);
+
+        $data = $request->validate(['device_id' => ['required', 'integer', 'exists:products,id']]);
+        $device = Product::query()->publiclyAvailable()
+            ->where('product_type', ProductType::Device->value)
+            ->findOrFail($data['device_id']);
+
+        return response()->json($this->accessoryCompatibilityService->determine($product, $device));
+    }
+
+    public function compatibleAccessories(Request $request): View
+    {
+        $data = $request->validate([
+            'device' => ['required', 'integer', 'exists:products,id'],
+            'subtype' => ['nullable', 'string', 'in:'.collect(AccessorySubtype::cases())->pluck('value')->implode(',')],
+            'category' => ['nullable', 'string', 'exists:categories,slug'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $device = Product::query()->publiclyAvailable()
+            ->where('product_type', ProductType::Device->value)
+            ->findOrFail($data['device']);
+        $matches = $this->accessoryCompatibilityService->compatibleAccessoriesForDevice($device)
+            ->when(filled($data['subtype'] ?? null), fn ($items) => $items->where('product.accessory_subtype.value', $data['subtype']))
+            ->when(filled($data['category'] ?? null), fn ($items) => $items->filter(fn (array $match) => $match['product']->category?->slug === $data['category']))
+            ->values();
+        $page = max(1, (int) ($data['page'] ?? 1));
+        $perPage = 12;
+        $products = new LengthAwarePaginator(
+            $matches->forPage($page, $perPage)->pluck('product')->values(),
+            $matches->count(),
+            $perPage,
+            $page,
+            ['path' => route('accessories.compatible'), 'query' => $request->query()]
+        );
+
+        return view('elite-mobile-marketplace.compatible-accessories', [
+            'activeTab' => 'shop',
+            'menuCategories' => $this->categoryMenuService->visibleRootCategories(),
+            'device' => $device,
+            'products' => $products,
+            'subtypes' => AccessorySubtype::cases(),
+            'categories' => Category::query()->where('is_active', true)->whereHas('products', fn ($query) => $query->where('product_type', ProductType::Accessory->value))->ordered()->get(['id', 'name', 'slug']),
         ]);
     }
 

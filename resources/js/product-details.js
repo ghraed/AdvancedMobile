@@ -145,6 +145,33 @@ if (root) {
             }
         });
 
+        const compatibilityChecker = $('[data-compatibility-checker]');
+        const compatibilityButton = compatibilityChecker?.querySelector('[data-check-compatibility]');
+        const compatibilityDevice = compatibilityChecker?.querySelector('[data-compatibility-device]');
+        const compatibilityResult = compatibilityChecker?.querySelector('[data-compatibility-result]');
+        const compatibilityReason = compatibilityChecker?.querySelector('[data-compatibility-reason]');
+        compatibilityButton?.addEventListener('click', async () => {
+            if (!compatibilityDevice?.value || !data.compatibilityCheckUrl) {
+                compatibilityResult.textContent = 'Choose a device first.';
+                compatibilityReason.textContent = '';
+                return;
+            }
+            compatibilityButton.disabled = true;
+            compatibilityResult.textContent = 'Checking…';
+            compatibilityReason.textContent = '';
+            try {
+                const result = await request(data.compatibilityCheckUrl, { device_id: Number(compatibilityDevice.value) });
+                compatibilityResult.textContent = result.status === 'compatible' ? 'Compatible' : result.status === 'incompatible' ? 'Not compatible' : 'Compatibility unknown';
+                compatibilityResult.className = `mt-3 font-bold ${result.status === 'compatible' ? 'text-emerald-700' : result.status === 'incompatible' ? 'text-red-700' : 'text-amber-700'}`;
+                compatibilityReason.textContent = result.reason || '';
+            } catch (error) {
+                compatibilityResult.textContent = 'Unable to check compatibility.';
+                compatibilityReason.textContent = error.message;
+            } finally {
+                compatibilityButton.disabled = false;
+            }
+        });
+
         // Browsers can restore this page from their back/forward cache after a
         // redirect. Reset controls that were disabled while navigation began.
         window.addEventListener('pageshow', () => {

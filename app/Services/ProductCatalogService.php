@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Enums\ProductStatus;
+use App\Enums\CompatibilityRuleType;
+use App\Enums\ProductType;
+use App\Models\AccessoryCompatibilityRule;
 use App\Models\InstallmentPlan;
 use App\Models\Product;
 use App\Models\ProductImage;
@@ -38,6 +41,7 @@ class ProductCatalogService
             $this->syncColorImages($product, $payload['color_images'] ?? [], $optionValues);
             $variantMap = $this->syncVariants($product, $payload['variants'] ?? [], $optionValues);
             $this->syncInstallmentPlans($product, $payload['installment_plans'] ?? [], $variantMap);
+            $this->syncCompatibility($product, $payload);
 
             return $product->fresh([
                 'category',
@@ -46,6 +50,10 @@ class ProductCatalogService
                 'images.optionValue',
                 'variants.images',
                 'variants.optionValues.productOption',
+                'deviceProfile',
+                'compatibilityRules',
+                'exactCompatibleDevices',
+                'compatibilityExclusions',
             ]);
         });
     }
@@ -89,6 +97,10 @@ class ProductCatalogService
                 'variants.images',
                 'variants.optionValues.productOption',
                 'installmentPlans',
+                'deviceProfile',
+                'compatibilityRules',
+                'exactCompatibleDevices',
+                'compatibilityExclusions',
             ]);
 
             $copy = $product->replicate([
@@ -164,6 +176,21 @@ class ProductCatalogService
                 $newPlan->save();
             }
 
+            if ($product->deviceProfile) {
+                $profile = $product->deviceProfile->replicate();
+                $profile->product()->associate($copy);
+                $profile->save();
+            }
+
+            foreach ($product->compatibilityRules as $rule) {
+                $newRule = $rule->replicate();
+                $newRule->accessory_product_id = $copy->id;
+                $newRule->save();
+            }
+
+            $copy->exactCompatibleDevices()->sync($product->exactCompatibleDevices->modelKeys());
+            $copy->compatibilityExclusions()->sync($product->compatibilityExclusions->modelKeys());
+
             return $copy->fresh([
                 'category',
                 'productOptions.values',
@@ -171,6 +198,10 @@ class ProductCatalogService
                 'variants.images',
                 'variants.optionValues.productOption',
                 'installmentPlans',
+                'deviceProfile',
+                'compatibilityRules',
+                'exactCompatibleDevices',
+                'compatibilityExclusions',
             ]);
         });
     }
@@ -178,6 +209,10 @@ class ProductCatalogService
     protected function normalizePayload(array $payload): array
     {
         $payload['slug'] = filled($payload['slug'] ?? null) ? Str::slug((string) $payload['slug']) : null;
+        $payload['product_type'] ??= ProductType::Other->value;
+        if ($payload['product_type'] !== ProductType::Accessory->value) {
+            $payload['accessory_subtype'] = null;
+        }
         $specifications = $payload['specifications'] ?? [];
 
         if (is_array($specifications) && ! array_is_list($specifications)) {
@@ -282,6 +317,68 @@ class ProductCatalogService
             ->all();
 
         return $payload;
+    }
+
+    protected function syncCompatibility(Product $product, array $payload): void
+    {
+        $type = $product->product_type;
+
+        if ($type === ProductType::Device) {
+            $profile = $payload['device_profile'] ?? [];
+            $product->deviceProfile()->updateOrCreate([], [
+                'model_identifier' => trim((string) ($profile['model_identifier'] ?? '')),
+                'model_family' => filled($profile['model_family'] ?? null) ? trim((string) $profile['model_family']) : null,
+                'release_year' => $profile['release_year'] ?? null,
+                'connector_type' => filled($profile['connector_type'] ?? null) ? trim((string) $profile['connector_type']) : null,
+                'charging_standards' => $this->normalizedStringList($profile['charging_standards'] ?? []),
+                'features' => $this->normalizedStringList($profile['features'] ?? []),
+            ]);
+            $product->compatibilityRules()->delete();
+            $product->exactCompatibleDevices()->detach();
+            $product->compatibilityExclusions()->detach();
+
+            return;
+        }
+
+        $product->deviceProfile()->delete();
+
+        if ($type !== ProductType::Accessory) {
+            $product->compatibilityRules()->delete();
+            $product->exactCompatibleDevices()->detach();
+            $product->compatibilityExclusions()->detach();
+
+            return;
+        }
+
+        $compatibility = $payload['compatibility'] ?? [];
+        $product->exactCompatibleDevices()->sync($compatibility['exact_device_ids'] ?? []);
+        $product->compatibilityExclusions()->sync($compatibility['excluded_device_ids'] ?? []);
+        $product->compatibilityRules()->delete();
+
+        foreach ($compatibility['rules'] ?? [] as $ruleType => $values) {
+            $type = CompatibilityRuleType::tryFrom((string) $ruleType);
+            if (! $type) {
+                continue;
+            }
+
+            foreach ($this->normalizedStringList($values) as $value) {
+                AccessoryCompatibilityRule::create([
+                    'accessory_product_id' => $product->id,
+                    'rule_type' => $type,
+                    'match_value' => $value,
+                ]);
+            }
+        }
+    }
+
+    protected function normalizedStringList(mixed $values): array
+    {
+        return collect(is_array($values) ? $values : [])
+            ->map(fn ($value) => trim((string) $value))
+            ->filter()
+            ->unique(fn ($value) => Str::lower($value))
+            ->values()
+            ->all();
     }
 
     protected function normalizeImages(array $rows): array

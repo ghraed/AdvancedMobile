@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ProductStatus;
+use App\Enums\ProductType;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -28,8 +29,19 @@ class ProductFactory extends Factory
             ],
             'brand' => fake()->randomElement(['Apple', 'Samsung', 'Google']),
             'status' => ProductStatus::Active,
+            'product_type' => ProductType::Other,
             'is_featured' => false,
             'published_at' => now(),
         ];
+    }
+
+    public function device(): static
+    {
+        return $this->state(fn () => ['product_type' => ProductType::Device, 'accessory_subtype' => null]);
+    }
+
+    public function accessory(?string $subtype = 'other'): static
+    {
+        return $this->state(fn () => ['product_type' => ProductType::Accessory, 'accessory_subtype' => $subtype]);
     }
 }

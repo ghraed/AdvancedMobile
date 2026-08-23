@@ -102,6 +102,13 @@
         'is_active' => $plan->is_active,
     ])->values()->all());
 
+    $productTypeValue = old('product_type', $product->product_type?->value ?? \App\Enums\ProductType::Other->value);
+    $deviceProfile = $product->deviceProfile;
+    $exactDeviceIds = collect(old('compatibility.exact_device_ids', $product->exactCompatibleDevices->modelKeys()))->map(fn ($id) => (int) $id);
+    $excludedDeviceIds = collect(old('compatibility.excluded_device_ids', $product->compatibilityExclusions->modelKeys()))->map(fn ($id) => (int) $id);
+    $savedRules = $product->compatibilityRules->groupBy(fn ($rule) => $rule->rule_type->value)->map->pluck('match_value');
+    $ruleValues = fn (string $type) => implode(', ', old('compatibility.rules.'.$type, $savedRules->get($type, collect())->all()));
+
 @endphp
 
 <div class="admin-card">
@@ -129,6 +136,24 @@
         <div class="admin-field">
             <label class="admin-label" for="brand">Brand</label>
             <input class="admin-input" id="brand" name="brand" value="{{ old('brand', $product->brand) }}">
+        </div>
+        <div class="admin-field">
+            <label class="admin-label" for="product_type">Product Type</label>
+            <select class="admin-select" id="product_type" name="product_type" required>
+                @foreach ($productTypes as $type)
+                    <option value="{{ $type->value }}" @selected($productTypeValue === $type->value)>{{ str($type->value)->headline() }}</option>
+                @endforeach
+            </select>
+            <p class="admin-help">Device and accessory types enable compatibility features. Existing products remain Other.</p>
+        </div>
+        <div class="admin-field" data-accessory-only>
+            <label class="admin-label" for="accessory_subtype">Accessory Type</label>
+            <select class="admin-select" id="accessory_subtype" name="accessory_subtype">
+                <option value="">Select type</option>
+                @foreach ($accessorySubtypes as $subtype)
+                    <option value="{{ $subtype->value }}" @selected(old('accessory_subtype', $product->accessory_subtype?->value) === $subtype->value)>{{ str($subtype->value)->headline() }}</option>
+                @endforeach
+            </select>
         </div>
         <div class="admin-field">
             <label class="admin-label" for="status">Product Status</label>
@@ -178,6 +203,45 @@
             <input type="checkbox" name="is_trending" value="1" @checked(old('is_trending', $product->is_trending ?? false))>
             <span>Show in trending products</span>
         </label>
+    </div>
+</div>
+
+<div class="admin-card" data-device-only>
+    <div class="admin-card__header"><div><h3 class="admin-card__title">Device Compatibility Profile</h3><p class="admin-card__copy">Use stable identifiers and standards; product names are never used for matching.</p></div></div>
+    <div class="admin-grid admin-grid-2">
+        <div class="admin-field"><label class="admin-label" for="device_model_identifier">Model Identifier</label><input class="admin-input" id="device_model_identifier" name="device_profile[model_identifier]" value="{{ old('device_profile.model_identifier', $deviceProfile?->model_identifier) }}" placeholder="e.g. iPhone16,1"></div>
+        <div class="admin-field"><label class="admin-label" for="device_model_family">Model Family</label><input class="admin-input" id="device_model_family" name="device_profile[model_family]" value="{{ old('device_profile.model_family', $deviceProfile?->model_family) }}" placeholder="e.g. iPhone 15"></div>
+        <div class="admin-field"><label class="admin-label" for="device_release_year">Release Year</label><input class="admin-input" id="device_release_year" type="number" min="1990" max="2100" name="device_profile[release_year]" value="{{ old('device_profile.release_year', $deviceProfile?->release_year) }}"></div>
+        <div class="admin-field"><label class="admin-label" for="device_connector_type">Connector</label><input class="admin-input" id="device_connector_type" name="device_profile[connector_type]" value="{{ old('device_profile.connector_type', $deviceProfile?->connector_type) }}" placeholder="USB-C, Lightning, Micro-USB"></div>
+        <div class="admin-field"><label class="admin-label" for="device_charging_standards">Charging Standards</label><input class="admin-input" id="device_charging_standards" name="device_profile[charging_standards]" value="{{ implode(', ', old('device_profile.charging_standards', $deviceProfile?->charging_standards ?? [])) }}" placeholder="MagSafe, Qi2"></div>
+        <div class="admin-field"><label class="admin-label" for="device_features">Features</label><input class="admin-input" id="device_features" name="device_profile[features]" value="{{ implode(', ', old('device_profile.features', $deviceProfile?->features ?? [])) }}" placeholder="wireless charging, USB PD"></div>
+    </div>
+</div>
+
+<div class="admin-card" data-accessory-only>
+    <div class="admin-card__header"><div><h3 class="admin-card__title">Accessory Compatibility</h3><p class="admin-card__copy">Exact devices rank first. Broader standards fill in compatible devices, and exclusions always override every match.</p></div></div>
+    <div class="admin-grid admin-grid-2">
+        <div class="admin-field">
+            <label class="admin-label" for="compatibility_device_search">Find Devices</label>
+            <input class="admin-input" id="compatibility_device_search" type="search" placeholder="Search brand or device name" data-device-search>
+            <label class="admin-label" for="exact_device_ids" style="margin-top:10px;">Exact Compatible Devices</label>
+            <select class="admin-select" id="exact_device_ids" name="compatibility[exact_device_ids][]" multiple size="8" data-device-select>
+                @foreach ($deviceProducts as $deviceProduct)<option value="{{ $deviceProduct->id }}" @selected($exactDeviceIds->contains($deviceProduct->id))>{{ trim($deviceProduct->brand.' '.$deviceProduct->name) }}</option>@endforeach
+            </select>
+            <p class="admin-help">Hold Ctrl/Cmd to select several devices in one save.</p>
+        </div>
+        <div class="admin-field">
+            <label class="admin-label" for="excluded_device_ids">Explicit Exclusions</label>
+            <select class="admin-select" id="excluded_device_ids" name="compatibility[excluded_device_ids][]" multiple size="10" data-device-select>
+                @foreach ($deviceProducts as $deviceProduct)<option value="{{ $deviceProduct->id }}" @selected($excludedDeviceIds->contains($deviceProduct->id))>{{ trim($deviceProduct->brand.' '.$deviceProduct->name) }}</option>@endforeach
+            </select>
+            <p class="admin-help">Exclusions override exact, family, connector, charging, and feature rules.</p>
+        </div>
+        <div class="admin-field"><label class="admin-label" for="rule_model_identifier">Model Identifiers</label><input class="admin-input" id="rule_model_identifier" name="compatibility[rules][model_identifier]" value="{{ $ruleValues('model_identifier') }}" placeholder="Comma-separated identifiers"></div>
+        <div class="admin-field"><label class="admin-label" for="rule_model_family">Model Families</label><input class="admin-input" id="rule_model_family" name="compatibility[rules][model_family]" value="{{ $ruleValues('model_family') }}" placeholder="iPhone 15, Galaxy S24"></div>
+        <div class="admin-field"><label class="admin-label" for="rule_connector">Connectors</label><input class="admin-input" id="rule_connector" name="compatibility[rules][connector]" value="{{ $ruleValues('connector') }}" placeholder="USB-C, Lightning"></div>
+        <div class="admin-field"><label class="admin-label" for="rule_charging">Charging Standards</label><input class="admin-input" id="rule_charging" name="compatibility[rules][charging_standard]" value="{{ $ruleValues('charging_standard') }}" placeholder="MagSafe, Qi, Qi2"></div>
+        <div class="admin-field"><label class="admin-label" for="rule_feature">Required Features</label><input class="admin-input" id="rule_feature" name="compatibility[rules][feature]" value="{{ $ruleValues('feature') }}" placeholder="wireless charging, USB PD"></div>
     </div>
 </div>
 
@@ -1184,6 +1248,25 @@
 
             document.getElementById('generate-variants')?.addEventListener('click', generateVariants);
             document.getElementById('name')?.addEventListener('input', autoFillVariantSkus);
+            const productType = document.getElementById('product_type');
+            const updateCompatibilityPanels = () => {
+                document.querySelectorAll('[data-device-only]').forEach((element) => {
+                    element.hidden = productType?.value !== 'device';
+                    element.querySelectorAll('input, select, textarea').forEach((control) => { control.disabled = element.hidden; });
+                });
+                document.querySelectorAll('[data-accessory-only]').forEach((element) => {
+                    element.hidden = productType?.value !== 'accessory';
+                    element.querySelectorAll('input, select, textarea').forEach((control) => { control.disabled = element.hidden; });
+                });
+            };
+            productType?.addEventListener('change', updateCompatibilityPanels);
+            updateCompatibilityPanels();
+            document.querySelector('[data-device-search]')?.addEventListener('input', (event) => {
+                const term = event.target.value.trim().toLowerCase();
+                document.querySelectorAll('[data-device-select] option').forEach((option) => {
+                    option.hidden = term !== '' && !option.textContent.toLowerCase().includes(term) && !option.selected;
+                });
+            });
             document.querySelector('form[data-loading-form]')?.addEventListener('submit', () => {
                 syncProductOptionValues();
                 syncColorImageInputs();

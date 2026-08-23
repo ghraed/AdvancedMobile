@@ -3,6 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Enums\ProductStatus;
+use App\Enums\AccessorySubtype;
+use App\Enums\CompatibilityRuleType;
+use App\Enums\ProductType;
 use App\Models\InstallmentPlan;
 use App\Models\Product;
 use App\Models\ProductOptionValue;
@@ -35,6 +38,8 @@ class ProductRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', Rule::unique('products', 'slug')->ignore($productId)],
             'brand' => ['nullable', 'string', 'max:255'],
+            'product_type' => ['required', Rule::enum(ProductType::class)],
+            'accessory_subtype' => ['nullable', Rule::enum(AccessorySubtype::class)],
             'short_description' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['required', Rule::enum(ProductStatus::class)],
@@ -46,6 +51,23 @@ class ProductRequest extends FormRequest
             'specifications.*.key' => ['nullable', 'string', 'max:255'],
             'specifications.*.value' => ['nullable', 'string', 'max:1000'],
             'confirm_variant_retirement' => ['nullable', 'boolean'],
+
+            'device_profile' => ['nullable', 'array'],
+            'device_profile.model_identifier' => ['nullable', 'required_if:product_type,device', 'string', 'max:255'],
+            'device_profile.model_family' => ['nullable', 'string', 'max:255'],
+            'device_profile.release_year' => ['nullable', 'integer', 'between:1990,2100'],
+            'device_profile.connector_type' => ['nullable', 'string', 'max:100'],
+            'device_profile.charging_standards' => ['nullable', 'array'],
+            'device_profile.charging_standards.*' => ['required', 'string', 'max:100', 'distinct:ignore_case'],
+            'device_profile.features' => ['nullable', 'array'],
+            'device_profile.features.*' => ['required', 'string', 'max:100', 'distinct:ignore_case'],
+            'compatibility.exact_device_ids' => ['nullable', 'array'],
+            'compatibility.exact_device_ids.*' => ['required', 'integer', 'distinct', Rule::exists('products', 'id')],
+            'compatibility.excluded_device_ids' => ['nullable', 'array'],
+            'compatibility.excluded_device_ids.*' => ['required', 'integer', 'distinct', Rule::exists('products', 'id')],
+            'compatibility.rules' => ['nullable', 'array'],
+            'compatibility.rules.*' => ['nullable', 'array'],
+            'compatibility.rules.*.*' => ['required', 'string', 'max:255', 'distinct:ignore_case'],
 
             'product_options' => ['nullable', 'array'],
             'product_options.*.id' => ['nullable', 'integer', Rule::exists('product_options', 'id')],
@@ -121,6 +143,11 @@ class ProductRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $payload = $this->all();
+        $payload['product_type'] ??= $this->route('product')?->product_type?->value ?? ProductType::Other->value;
+        $payload['accessory_subtype'] ??= $this->route('product')?->accessory_subtype?->value;
+        if ($payload['product_type'] !== ProductType::Accessory->value) {
+            $payload['accessory_subtype'] = null;
+        }
 
         // Validate the same normalized slug that will be persisted. Without this,
         // an empty slug is generated later by the model and can bypass the unique rule.
@@ -140,6 +167,16 @@ class ProductRequest extends FormRequest
 
         foreach (['is_featured', 'is_trending', 'confirm_variant_retirement'] as $field) {
             $payload[$field] = $this->boolean($field);
+        }
+
+        foreach (['charging_standards', 'features'] as $field) {
+            if (isset($payload['device_profile'][$field])) {
+                $payload['device_profile'][$field] = $this->normalizeCompatibilityList($payload['device_profile'][$field]);
+            }
+        }
+
+        foreach (($payload['compatibility']['rules'] ?? []) as $type => $values) {
+            $payload['compatibility']['rules'][$type] = $this->normalizeCompatibilityList($values);
         }
 
         foreach (($payload['product_options'] ?? []) as $optionIndex => $option) {
@@ -226,11 +263,65 @@ class ProductRequest extends FormRequest
             $this->validateOwnedRecords($validator);
             $this->validateVariants($validator);
             $this->validateInstallmentPlans($validator);
+            $this->validateCompatibility($validator);
 
             if ($validator->errors()->isNotEmpty()) {
                 $this->replace($this->preserveUploadedImagesForRetry($this->all()));
             }
         });
+    }
+
+    protected function validateCompatibility(Validator $validator): void
+    {
+        $rules = $this->input('compatibility.rules', []);
+        $allowedRuleTypes = collect(CompatibilityRuleType::cases())->pluck('value')->all();
+
+        foreach (array_keys(is_array($rules) ? $rules : []) as $ruleType) {
+            if (! in_array($ruleType, $allowedRuleTypes, true)) {
+                $validator->errors()->add('compatibility.rules.'.$ruleType, 'This compatibility rule type is invalid.');
+            }
+        }
+
+        $exactIds = $this->input('compatibility.exact_device_ids', []);
+        $excludedIds = $this->input('compatibility.excluded_device_ids', []);
+        $deviceIds = collect([
+            ...(is_array($exactIds) ? $exactIds : []),
+            ...(is_array($excludedIds) ? $excludedIds : []),
+        ])->map(fn ($id) => (int) $id)->unique()->values();
+
+        if ($product = $this->route('product')) {
+            if ($deviceIds->contains($product->id)) {
+                $validator->errors()->add('compatibility.exact_device_ids', 'An accessory cannot be linked to itself.');
+            }
+        }
+
+        if ($deviceIds->isNotEmpty()) {
+            $validDeviceIds = Product::query()
+                ->whereIn('id', $deviceIds)
+                ->where('product_type', ProductType::Device->value)
+                ->pluck('id');
+
+            if ($validDeviceIds->count() !== $deviceIds->count()) {
+                $validator->errors()->add('compatibility.exact_device_ids', 'Compatibility selections must reference device products.');
+            }
+        }
+
+        if ($this->input('product_type') !== ProductType::Accessory->value
+            && ($deviceIds->isNotEmpty() || collect($rules)->flatten()->filter(fn ($value) => filled($value))->isNotEmpty())) {
+            $validator->errors()->add('compatibility', 'Compatibility rules can only be assigned to accessory products.');
+        }
+    }
+
+    protected function normalizeCompatibilityList(mixed $values): array
+    {
+        $values = is_array($values) ? $values : preg_split('/[,\r\n]+/', (string) $values);
+
+        return collect($values)
+            ->map(fn ($value) => trim((string) $value))
+            ->filter()
+            ->unique(fn ($value) => Str::lower($value))
+            ->values()
+            ->all();
     }
 
     /** Store selected images temporarily so a validation redirect can restore their previews. */

@@ -3,12 +3,16 @@
 namespace App\Models;
 
 use App\Enums\ProductStatus;
+use App\Enums\AccessorySubtype;
+use App\Enums\ProductType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -25,6 +29,8 @@ class Product extends Model
         'description',
         'specifications',
         'brand',
+        'product_type',
+        'accessory_subtype',
         'status',
         'is_featured',
         'is_trending',
@@ -35,6 +41,8 @@ class Product extends Model
     protected $casts = [
         'specifications' => 'array',
         'status' => ProductStatus::class,
+        'product_type' => ProductType::class,
+        'accessory_subtype' => AccessorySubtype::class,
         'is_featured' => 'boolean',
         'is_trending' => 'boolean',
         'published_at' => 'datetime',
@@ -90,6 +98,36 @@ class Product extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class);
+    }
+
+    public function deviceProfile(): HasOne
+    {
+        return $this->hasOne(DeviceProfile::class);
+    }
+
+    public function compatibilityRules(): HasMany
+    {
+        return $this->hasMany(AccessoryCompatibilityRule::class, 'accessory_product_id');
+    }
+
+    public function exactCompatibleDevices(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'accessory_compatible_products', 'accessory_product_id', 'compatible_product_id')->withTimestamps();
+    }
+
+    public function exactCompatibleAccessories(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'accessory_compatible_products', 'compatible_product_id', 'accessory_product_id')->withTimestamps();
+    }
+
+    public function compatibilityExclusions(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'accessory_compatibility_exclusions', 'accessory_product_id', 'product_id')->withTimestamps();
+    }
+
+    public function excludedFromAccessories(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'accessory_compatibility_exclusions', 'product_id', 'accessory_product_id')->withTimestamps();
     }
 
     public function images(): HasMany

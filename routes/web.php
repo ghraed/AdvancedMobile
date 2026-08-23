@@ -25,6 +25,8 @@ Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update
 Route::get('/compare', [EliteMobileMarketplaceController::class, 'compare'])->name('products.compare');
 Route::get('/product-details', [EliteMobileMarketplaceController::class, 'productDetails']);
 Route::get('/products/{product:slug}', [EliteMobileMarketplaceController::class, 'showProduct'])->name('products.show');
+Route::post('/products/{product:slug}/check-compatibility', [EliteMobileMarketplaceController::class, 'checkCompatibility'])->name('products.check-compatibility');
+Route::get('/accessories/compatible', [EliteMobileMarketplaceController::class, 'compatibleAccessories'])->name('accessories.compatible');
 Route::post('/products/{product:slug}/resolve-variant', [EliteMobileMarketplaceController::class, 'resolveVariant'])->name('products.resolve-variant');
 Route::post('/products/{product:slug}/purchase-preview', [EliteMobileMarketplaceController::class, 'previewPurchase'])->name('products.purchase-preview');
 Route::post('/products/{product:slug}/confirm-purchase', [EliteMobileMarketplaceController::class, 'confirmPurchase'])->name('products.confirm-purchase');
