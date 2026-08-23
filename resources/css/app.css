@@ -526,8 +526,16 @@ html[dir='rtl'] .pm-header, html[dir='rtl'] .pm-site-layout { direction: rtl; }
 .pm-support-float { display: inline-flex; align-items: center; justify-content: center; gap: .65rem; border-radius: 999px; padding: .9rem 1.2rem; text-decoration: none; transition: .2s ease; }
 .pm-concierge-button { border: 1px solid rgba(255,255,255,.55); color: #fff; background: rgba(255,255,255,.08); backdrop-filter: blur(8px); white-space: nowrap; }
 .pm-concierge-button:hover { background: #fffaf0; color: var(--pm-primary-strong); }
-.pm-support-float { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 44; color: #fff; background: #54735b; box-shadow: 0 18px 45px rgba(41,66,48,.28); font-size: .8rem; font-weight: 700; }
-.pm-support-float:hover { transform: translateY(-2px); background: #3f5b47; }
+.pm-whatsapp-icon { display: block; width: 1.7rem; height: 1.7rem; flex: 0 0 auto; }
+.pm-support-float { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 44; display: grid; width: 3.75rem; min-width: 3.75rem; height: 3.75rem; min-height: 3.75rem; aspect-ratio: 1; place-items: center; overflow: hidden; border-radius: 50%; padding: 0; color: #fff; background: #25d366; box-shadow: 0 18px 45px rgba(24,126,66,.28); animation: pm-support-vibrate 7s ease-in-out infinite; }
+.pm-support-float:hover { transform: translateY(-2px); background: #1ebe57; }
+
+@keyframes pm-support-vibrate {
+    0%, 7%, 100% { transform: translateX(0); }
+    1%, 5% { transform: translateX(-3px) rotate(-2deg); }
+    2%, 6% { transform: translateX(3px) rotate(2deg); }
+    3%, 4% { transform: translateX(-2px) rotate(-1deg); }
+}
 
 /* Catalog */
 .pm-catalog-page { display: grid; gap: clamp(2.5rem, 5vw, 5rem); }
@@ -885,7 +893,8 @@ html[dir='rtl'] .pm-page select.pm-locale-select:not([multiple]) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .pm-page select:not(.admin-select) { transition: none; }
+    .pm-page select:not(.admin-select),
+    .pm-support-float { transition: none; animation: none; }
 }
 
 /* Floating-label form fields */
