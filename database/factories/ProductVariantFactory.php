@@ -18,6 +18,7 @@ class ProductVariantFactory extends Factory
             'barcode' => null,
             'price' => fake()->randomFloat(2, 299, 1999),
             'compare_at_price' => null,
+            'cost_price_cents' => null,
             'stock_quantity' => fake()->numberBetween(0, 25),
             'is_active' => true,
             'option_signature' => fake()->unique()->numerify('###|###'),

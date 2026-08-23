@@ -89,6 +89,7 @@ class ProductRequest extends FormRequest
             'variants.*.barcode' => ['nullable', 'string', 'max:255'],
             'variants.*.price' => ['required', 'numeric', 'min:0'],
             'variants.*.compare_at_price' => ['nullable', 'numeric', 'min:0'],
+            'variants.*.cost_price' => ['nullable', 'decimal:0,2', 'min:0'],
             'variants.*.stock_quantity' => ['required', 'integer', 'min:0'],
             'variants.*.is_active' => ['nullable', 'boolean'],
             'variants.*.option_value_ids' => ['nullable', 'array'],

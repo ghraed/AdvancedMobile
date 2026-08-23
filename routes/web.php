@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\InstallmentApplicationController as AdminInstallm
 use App\Http\Controllers\Admin\InstallmentPlanController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProfitAnalyticsController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\EliteMobileMarketplaceController;
@@ -75,6 +76,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/', DashboardController::class)->name('dashboard');
+        Route::get('/analytics/profit', [ProfitAnalyticsController::class, 'index'])->name('analytics.profit');
+        Route::get('/analytics/profit/export', [ProfitAnalyticsController::class, 'export'])->name('analytics.profit.export');
         Route::get('/account', [AccountController::class, 'edit'])->name('account.edit');
         Route::put('/account', [AccountController::class, 'update'])->name('account.update');
         Route::get('/installment-plans', [InstallmentPlanController::class, 'index'])->name('installment-plans.index');

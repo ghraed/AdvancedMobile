@@ -73,6 +73,7 @@
             'sku_auto' => true,
             'price' => $variant->price,
             'compare_at_price' => $variant->compare_at_price,
+            'cost_price' => $variant->cost_price_cents === null ? null : number_format($variant->cost_price_cents / 100, 2, '.', ''),
             'stock_quantity' => $variant->stock_quantity,
             'is_active' => $variant->is_active,
             'option_values' => $optionValues,
@@ -776,6 +777,7 @@
                     variant.barcode = value('barcode') ?? variant.barcode;
                     variant.price = value('price') ?? variant.price;
                     variant.compare_at_price = value('compare_at_price') ?? variant.compare_at_price;
+                    variant.cost_price = value('cost_price') ?? variant.cost_price;
                     variant.stock_quantity = value('stock_quantity') ?? variant.stock_quantity;
                     variant.is_active = document.querySelector(`input[name="variants[${variantIndex}][is_active]"][value="1"]`)?.checked ?? variant.is_active;
                 });
@@ -830,7 +832,7 @@
                     return;
                 }
 
-                roots.variants.innerHTML = `<div class="variant-table-wrap"><table class="variant-table"><thead><tr><th class="variant-sync-column"></th><th>Combination</th><th>SKU</th><th>Barcode</th><th>3 Payments Total</th><th>6 Payments Total</th><th>9 Payments Total</th><th>Compare At</th><th class="variant-stock-column">Stock</th><th>Active</th><th>Advanced</th></tr></thead><tbody>${state.variants.map((variant, variantIndex) => `
+                roots.variants.innerHTML = `<div class="variant-table-wrap"><table class="variant-table"><thead><tr><th class="variant-sync-column"></th><th>Combination</th><th>SKU</th><th>Barcode</th><th>3 Payments Total</th><th>6 Payments Total</th><th>9 Payments Total</th><th>Compare At</th><th>Unit Cost</th><th class="variant-stock-column">Stock</th><th>Active</th><th>Advanced</th></tr></thead><tbody>${state.variants.map((variant, variantIndex) => `
                     <tr data-variant-record="${variantIndex}">
                         <td class="variant-sync-column"><input class="variant-sync-select" type="checkbox" data-variant-sync-select="${variantIndex}" aria-label="Select variant"></td>
                         <td data-label="Combination"><strong>${escapeHtml(variantLabel(variant))}</strong><input type="hidden" name="variants[${variantIndex}][id]" value="${variant.id || ''}"><input type="hidden" name="variants[${variantIndex}][client_key]" value="${escapeHtml(variant.client_key || '')}">${variant.option_values.map((value, valueIndex) => `<input type="hidden" name="variants[${variantIndex}][option_value_ids][]" value="${value.id || ''}"><input type="hidden" name="variants[${variantIndex}][option_values][${valueIndex}][id]" value="${value.id || ''}"><input type="hidden" name="variants[${variantIndex}][option_values][${valueIndex}][option_slug]" value="${escapeHtml(value.option_slug || '')}"><input type="hidden" name="variants[${variantIndex}][option_values][${valueIndex}][name]" value="${escapeHtml(value.name || '')}">`).join('')}</td>
@@ -840,6 +842,7 @@
                         ${installmentCell(variant, 6)}
                         ${installmentCell(variant, 9)}
                         <td data-label="Compare At"><input class="admin-input" type="number" step="0.01" min="0" name="variants[${variantIndex}][compare_at_price]" data-variant-sync-field="compare_at_price" value="${escapeHtml(variant.compare_at_price || '')}"></td>
+                        <td data-label="Unit Cost"><input class="admin-input" type="number" step="0.01" min="0" name="variants[${variantIndex}][cost_price]" data-variant-sync-field="cost_price" value="${escapeHtml(variant.cost_price ?? '')}" placeholder="Unknown" aria-label="Unit cost for ${escapeHtml(variantLabel(variant))}"></td>
                         <td data-label="Stock" class="variant-stock-column"><input class="admin-input variant-stock-input" type="number" min="0" name="variants[${variantIndex}][stock_quantity]" data-variant-sync-field="stock_quantity" value="${escapeHtml(variant.stock_quantity ?? 0)}" required></td>
                         <td data-label="Active"><label class="admin-toggle" title="${variant.is_active === false ? 'Activate variant' : 'Deactivate variant'}"><input type="hidden" name="variants[${variantIndex}][is_active]" value="0"><input class="admin-toggle__input" type="checkbox" name="variants[${variantIndex}][is_active]" data-variant-sync-field="is_active" value="1" ${variant.is_active === false ? '' : 'checked'}><span class="admin-toggle__track" aria-hidden="true"><span class="admin-toggle__thumb"></span></span><span class="sr-only">Active variant</span></label></td>
                         <td data-label="Advanced"><details><summary>Advanced</summary><div class="variant-advanced"><p class="admin-help">Optional. Use images here only when this exact variant must override its color gallery.</p><button type="button" class="admin-button admin-button--secondary" data-add-variant-image="${variantIndex}">Override Color Gallery</button><div class="admin-grid" data-variant-images-root="${variantIndex}">${buildVariantImages(variant, variantIndex) || '<div class="admin-help">Color gallery will be used.</div>'}</div><button type="button" class="admin-link" data-remove-variant="${variantIndex}">Remove variant</button></div></details></td>
@@ -1044,6 +1047,7 @@
                         sku_auto: true,
                         price: '',
                         compare_at_price: '',
+                        cost_price: '',
                         stock_quantity: 0,
                         is_active: true,
                         option_values: combination,

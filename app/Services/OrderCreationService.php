@@ -41,7 +41,7 @@ class OrderCreationService
                 throw new DomainException('This saved purchase has already been completed.');
             }
 
-            $product = Product::query()->publiclyAvailable()->whereKey($pending->product_id)->lockForUpdate()->first()
+            $product = Product::query()->publiclyAvailable()->with('category')->whereKey($pending->product_id)->lockForUpdate()->first()
                 ?? throw new DomainException('This product is no longer available.');
             $variant = ProductVariant::query()->whereKey($pending->product_variant_id)->where('product_id', $product->id)->lockForUpdate()->first();
             if (! $variant || ! $variant->is_active) {
@@ -80,7 +80,7 @@ class OrderCreationService
             $preview = $this->plans->previewFromPayload($plan->toArray(), (float) $variant->price, $scheduledAt);
             $options = $variant->optionValues->mapWithKeys(fn ($value) => [$value->productOption?->slug => $value->display_name ?: $value->name]);
             $order = Order::create([
-                'reference' => $this->reference(), 'user_id' => $user->id, 'pending_purchase_session_id' => $pending->id,
+                'reference' => $this->reference(), 'sales_channel' => 'online', 'user_id' => $user->id, 'pending_purchase_session_id' => $pending->id,
                 'product_id' => $product->id, 'product_variant_id' => $variant->id, 'installment_plan_id' => $plan->id,
                 'quantity' => 1, 'status' => 'pending', 'product_name' => $product->name, 'sku' => $variant->sku,
                 'storage' => $options->get('storage'), 'color' => $options->get('color'),
@@ -88,6 +88,24 @@ class OrderCreationService
                 'amount_due_today' => $preview['amount_due_now'], 'total_financed_amount' => $preview['total_financed_amount'],
                 'total_amount' => $preview['total_amount'], 'future_payment_count' => $preview['future_payment_count'],
                 'interval_type' => $preview['interval_type'], 'customer_snapshot' => ['name' => $user->name, 'email' => $user->email],
+            ]);
+            $unitPriceCents = $this->decimalToCents((string) $variant->price);
+            $order->items()->create([
+                'product_id' => $product->id,
+                'product_variant_id' => $variant->id,
+                'category_id' => $product->category_id,
+                'product_name' => $product->name,
+                'brand' => $product->brand,
+                'category_name' => $product->category?->name,
+                'sku' => $variant->sku,
+                'barcode' => $variant->barcode,
+                'variant_options' => $options->all(),
+                'unit_price_cents' => $unitPriceCents,
+                'unit_cost_cents' => $variant->cost_price_cents,
+                'quantity' => 1,
+                'subtotal_cents' => $unitPriceCents,
+                'discount_cents' => 0,
+                'total_cents' => $unitPriceCents,
             ]);
             $order->installments()->create([
                 'sequence' => 1, 'amount' => $preview['amount_due_now'], 'due_date' => $scheduledAt->toDateString(), 'status' => 'due',
@@ -109,5 +127,12 @@ class OrderCreationService
     private function reference(): string
     {
         return 'ORD-'.now()->format('Ymd').'-'.Str::upper(Str::random(8));
+    }
+
+    private function decimalToCents(string $amount): int
+    {
+        [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
+
+        return ((int) $whole * 100) + (int) substr(str_pad($fraction, 2, '0'), 0, 2);
     }
 }

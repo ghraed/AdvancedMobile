@@ -245,6 +245,7 @@ class ProductCatalogService
                     'barcode' => filled($variant['barcode'] ?? null) ? trim((string) $variant['barcode']) : null,
                     'price' => round((float) $variant['price'], 2),
                     'compare_at_price' => filled($variant['compare_at_price'] ?? null) ? round((float) $variant['compare_at_price'], 2) : null,
+                    'cost_price_cents' => filled($variant['cost_price'] ?? null) ? $this->decimalToCents((string) $variant['cost_price']) : null,
                     'stock_quantity' => (int) $variant['stock_quantity'],
                     'is_active' => (bool) ($variant['is_active'] ?? true),
                     'option_value_ids' => collect($variant['option_value_ids'] ?? [])->filter()->map(fn ($id) => (int) $id)->values()->all(),
@@ -475,6 +476,7 @@ class ProductCatalogService
                 'barcode' => $row['barcode'],
                 'price' => $row['price'],
                 'compare_at_price' => $row['compare_at_price'],
+                'cost_price_cents' => $row['cost_price_cents'],
                 'stock_quantity' => $row['stock_quantity'],
                 'is_active' => (bool) ($row['is_active'] ?? true),
                 'option_signature' => ProductVariant::buildOptionSignature($selectedValueIds),
@@ -500,6 +502,14 @@ class ProductCatalogService
         }
 
         return $saved;
+    }
+
+    private function decimalToCents(string $amount): int
+    {
+        [$whole, $fraction] = array_pad(explode('.', trim($amount), 2), 2, '');
+        $fraction = substr(str_pad($fraction, 2, '0'), 0, 2);
+
+        return ((int) $whole * 100) + (int) $fraction;
     }
 
     protected function syncImages(Product $product, array $rows): void

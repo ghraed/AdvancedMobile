@@ -28,6 +28,7 @@ class AdminProductManagementTest extends TestCase
 
         $payload = $this->validPayload($category->id);
         $payload['variants'][0]['barcode'] = '629100000101';
+        $payload['variants'][0]['cost_price'] = '650.25';
         $response = $this->actingAs($admin)->post(route('admin.products.store'), $payload);
 
         $product = Product::query()->with(['productOptions.values', 'variants.optionValues', 'images', 'installmentPlans'])->firstOrFail();
@@ -38,6 +39,7 @@ class AdminProductManagementTest extends TestCase
         $this->assertCount(2, $product->productOptions);
         $this->assertSame(4, $product->variants->count());
         $this->assertSame('629100000101', $product->variants->firstWhere('sku', 'PIX-128-BLK')->barcode);
+        $this->assertSame(65025, $product->variants->firstWhere('sku', 'PIX-128-BLK')->cost_price_cents);
         $this->assertSame(['Display', 'Battery'], collect($product->specifications)->pluck('key')->all());
         $this->assertCount(1, $product->images);
         $this->assertCount(12, $product->installmentPlans);

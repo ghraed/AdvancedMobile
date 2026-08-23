@@ -67,6 +67,7 @@ class PosCheckoutService
 
                 $subtotal = (int) $lines->sum('subtotal_cents');
                 [$discountType, $discountValue, $discountCents] = $this->discount($payload['discount'] ?? [], $subtotal);
+                $lines = $this->allocateDiscount($lines, $discountCents, $subtotal);
                 $total = $subtotal - $discountCents;
                 $payments = $this->payments($payload['payments'], $total);
                 $first = $lines->first();
@@ -110,16 +111,19 @@ class PosCheckoutService
                     $order->items()->create([
                         'product_id' => $variant->product_id,
                         'product_variant_id' => $variant->id,
+                        'category_id' => $variant->product->category_id,
                         'product_name' => $variant->product->name,
                         'brand' => $variant->product->brand,
+                        'category_name' => $variant->product->category?->name,
                         'sku' => $variant->sku,
                         'barcode' => $variant->barcode,
                         'variant_options' => $line['options'],
                         'unit_price_cents' => $line['unit_price_cents'],
+                        'unit_cost_cents' => $variant->cost_price_cents,
                         'quantity' => $line['quantity'],
                         'subtotal_cents' => $line['subtotal_cents'],
-                        'discount_cents' => 0,
-                        'total_cents' => $line['subtotal_cents'],
+                        'discount_cents' => $line['discount_cents'],
+                        'total_cents' => $line['total_cents'],
                     ]);
                 }
 
@@ -227,6 +231,39 @@ class PosCheckoutService
         }
 
         return $payments->all();
+    }
+
+    /** Allocate an order discount in cents without rounding drift. */
+    private function allocateDiscount(Collection $lines, int $discountCents, int $subtotal): Collection
+    {
+        if ($discountCents === 0 || $subtotal === 0) {
+            return $lines->map(fn (array $line) => $line + [
+                'discount_cents' => 0,
+                'total_cents' => $line['subtotal_cents'],
+            ]);
+        }
+
+        $allocated = 0;
+        $lines = $lines->values()->map(function (array $line) use ($discountCents, $subtotal, &$allocated): array {
+            $share = intdiv($discountCents * $line['subtotal_cents'], $subtotal);
+            $allocated += $share;
+
+            return $line + ['discount_cents' => $share];
+        });
+
+        $remainder = $discountCents - $allocated;
+        for ($index = 0; $index < $remainder; $index++) {
+            $lineIndex = $index % $lines->count();
+            $line = $lines->get($lineIndex);
+            $line['discount_cents']++;
+            $lines->put($lineIndex, $line);
+        }
+
+        return $lines->map(function (array $line): array {
+            $line['total_cents'] = $line['subtotal_cents'] - $line['discount_cents'];
+
+            return $line;
+        });
     }
 
     private function decimalToCents(string $amount): int
