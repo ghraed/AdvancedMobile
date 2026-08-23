@@ -15,6 +15,7 @@ class ProductVariantFactory extends Factory
         return [
             'product_id' => Product::factory(),
             'sku' => strtoupper(fake()->unique()->bothify('SKU-####??')),
+            'barcode' => null,
             'price' => fake()->randomFloat(2, 299, 1999),
             'compare_at_price' => null,
             'stock_quantity' => fake()->numberBetween(0, 25),

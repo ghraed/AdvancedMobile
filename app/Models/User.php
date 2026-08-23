@@ -5,9 +5,9 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -63,8 +63,24 @@ class User extends Authenticatable
         return $this->isAdmin();
     }
 
+    /** Kept separate from admin access so a cashier role can be added safely later. */
+    public function canAccessPos(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    public function canRefundPosSales(): bool
+    {
+        return $this->isAdmin();
+    }
+
     public function installmentApplications(): HasMany
     {
         return $this->hasMany(InstallmentApplication::class);
+    }
+
+    public function posSales(): HasMany
+    {
+        return $this->hasMany(Order::class, 'cashier_id');
     }
 }

@@ -69,6 +69,7 @@
             'id' => $variant->id,
             'client_key' => (string) $variant->id,
             'sku' => $variant->sku,
+            'barcode' => $variant->barcode,
             'sku_auto' => true,
             'price' => $variant->price,
             'compare_at_price' => $variant->compare_at_price,
@@ -772,6 +773,7 @@
                 state.variants.forEach((variant, variantIndex) => {
                     const value = (field) => document.querySelector(`input[name="variants[${variantIndex}][${field}]"]`)?.value;
                     variant.sku = value('sku') ?? variant.sku;
+                    variant.barcode = value('barcode') ?? variant.barcode;
                     variant.price = value('price') ?? variant.price;
                     variant.compare_at_price = value('compare_at_price') ?? variant.compare_at_price;
                     variant.stock_quantity = value('stock_quantity') ?? variant.stock_quantity;
@@ -828,11 +830,12 @@
                     return;
                 }
 
-                roots.variants.innerHTML = `<div class="variant-table-wrap"><table class="variant-table"><thead><tr><th class="variant-sync-column"></th><th>Combination</th><th>SKU</th><th>3 Payments Total</th><th>6 Payments Total</th><th>9 Payments Total</th><th>Compare At</th><th class="variant-stock-column">Stock</th><th>Active</th><th>Advanced</th></tr></thead><tbody>${state.variants.map((variant, variantIndex) => `
+                roots.variants.innerHTML = `<div class="variant-table-wrap"><table class="variant-table"><thead><tr><th class="variant-sync-column"></th><th>Combination</th><th>SKU</th><th>Barcode</th><th>3 Payments Total</th><th>6 Payments Total</th><th>9 Payments Total</th><th>Compare At</th><th class="variant-stock-column">Stock</th><th>Active</th><th>Advanced</th></tr></thead><tbody>${state.variants.map((variant, variantIndex) => `
                     <tr data-variant-record="${variantIndex}">
                         <td class="variant-sync-column"><input class="variant-sync-select" type="checkbox" data-variant-sync-select="${variantIndex}" aria-label="Select variant"></td>
                         <td data-label="Combination"><strong>${escapeHtml(variantLabel(variant))}</strong><input type="hidden" name="variants[${variantIndex}][id]" value="${variant.id || ''}"><input type="hidden" name="variants[${variantIndex}][client_key]" value="${escapeHtml(variant.client_key || '')}">${variant.option_values.map((value, valueIndex) => `<input type="hidden" name="variants[${variantIndex}][option_value_ids][]" value="${value.id || ''}"><input type="hidden" name="variants[${variantIndex}][option_values][${valueIndex}][id]" value="${value.id || ''}"><input type="hidden" name="variants[${variantIndex}][option_values][${valueIndex}][option_slug]" value="${escapeHtml(value.option_slug || '')}"><input type="hidden" name="variants[${variantIndex}][option_values][${valueIndex}][name]" value="${escapeHtml(value.name || '')}">`).join('')}</td>
                         <td data-label="SKU"><input class="admin-input" name="variants[${variantIndex}][sku]" data-variant-sync-field="sku" value="${escapeHtml(variant.sku || '')}" required></td>
+                        <td data-label="Barcode"><input class="admin-input" name="variants[${variantIndex}][barcode]" data-variant-sync-field="barcode" value="${escapeHtml(variant.barcode || '')}" inputmode="numeric" autocomplete="off" aria-label="Barcode for ${escapeHtml(variantLabel(variant))}"></td>
                         ${installmentCell(variant, 3)}
                         ${installmentCell(variant, 6)}
                         ${installmentCell(variant, 9)}

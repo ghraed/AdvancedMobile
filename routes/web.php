@@ -4,14 +4,15 @@ use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\InstallmentApplicationController as AdminInstallmentApplicationController;
 use App\Http\Controllers\Admin\InstallmentPlanController;
+use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\ProductController;
-use App\Http\Controllers\EliteMobileMarketplaceController;
-use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CustomerAuthController;
+use App\Http\Controllers\EliteMobileMarketplaceController;
 use App\Http\Controllers\InstallmentApplicationController;
 use App\Http\Controllers\LocaleController;
-use App\Http\Controllers\Admin\InstallmentApplicationController as AdminInstallmentApplicationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [EliteMobileMarketplaceController::class, 'home']);
@@ -58,6 +59,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('guest')->group(function () {
         Route::get('/login', [AuthController::class, 'create'])->name('login');
         Route::post('/login', [AuthController::class, 'store'])->name('login.store');
+    });
+
+    Route::middleware(['auth', 'can:access-pos'])->prefix('pos')->name('pos.')->group(function () {
+        Route::get('/', [PosController::class, 'index'])->name('index');
+        Route::get('/products/search', [PosController::class, 'search'])->name('products.search');
+        Route::post('/checkout', [PosController::class, 'checkout'])->name('checkout');
+        Route::get('/sales', [PosController::class, 'sales'])->name('sales.index');
+        Route::get('/sales/{order}', [PosController::class, 'show'])->name('sales.show');
+        Route::get('/sales/{order}/receipt', [PosController::class, 'receipt'])->name('sales.receipt');
+        Route::post('/sales/{order}/refund', [PosController::class, 'refund'])
+            ->middleware('can:refund-pos-sales')
+            ->name('sales.refund');
     });
 
     Route::middleware(['auth', 'admin'])->group(function () {

@@ -64,7 +64,9 @@ class ProductController extends Controller
                     $nested
                         ->where('products.name', 'like', '%'.$filters['search'].'%')
                         ->orWhere('products.brand', 'like', '%'.$filters['search'].'%')
-                        ->orWhereHas('variants', fn (Builder $variantQuery) => $variantQuery->where('sku', 'like', '%'.$filters['search'].'%'));
+                        ->orWhereHas('variants', fn (Builder $variantQuery) => $variantQuery
+                            ->where('sku', 'like', '%'.$filters['search'].'%')
+                            ->orWhere('barcode', 'like', '%'.$filters['search'].'%'));
                 });
             })
             ->when($filters['category_id'], fn (Builder $query, int $categoryId) => $query->where('products.category_id', $categoryId))

@@ -26,7 +26,9 @@ class AdminProductManagementTest extends TestCase
         $parent = Category::factory()->create(['name' => 'Phones']);
         $category = Category::factory()->create(['parent_id' => $parent->id, 'name' => 'Android Phones']);
 
-        $response = $this->actingAs($admin)->post(route('admin.products.store'), $this->validPayload($category->id));
+        $payload = $this->validPayload($category->id);
+        $payload['variants'][0]['barcode'] = '629100000101';
+        $response = $this->actingAs($admin)->post(route('admin.products.store'), $payload);
 
         $product = Product::query()->with(['productOptions.values', 'variants.optionValues', 'images', 'installmentPlans'])->firstOrFail();
 
@@ -35,6 +37,7 @@ class AdminProductManagementTest extends TestCase
         $this->assertSame(ProductStatus::Active, $product->status);
         $this->assertCount(2, $product->productOptions);
         $this->assertSame(4, $product->variants->count());
+        $this->assertSame('629100000101', $product->variants->firstWhere('sku', 'PIX-128-BLK')->barcode);
         $this->assertSame(['Display', 'Battery'], collect($product->specifications)->pluck('key')->all());
         $this->assertCount(1, $product->images);
         $this->assertCount(12, $product->installmentPlans);
@@ -129,6 +132,23 @@ class AdminProductManagementTest extends TestCase
                 'variants.1.sku',
                 'variants.1.option_values',
             ]);
+    }
+
+    public function test_variant_barcodes_must_be_unique_when_present(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $category = Category::factory()->create();
+        $payload = $this->validPayload($category->id);
+        $payload['variants'][0]['barcode'] = 'DUPLICATE-BARCODE';
+        $payload['variants'][1]['barcode'] = 'DUPLICATE-BARCODE';
+
+        $this->actingAs($admin)
+            ->from(route('admin.products.create'))
+            ->post(route('admin.products.store'), $payload)
+            ->assertRedirect(route('admin.products.create'))
+            ->assertSessionHasErrors('variants.1.barcode');
+
+        $this->assertDatabaseCount('products', 0);
     }
 
     public function test_admin_can_update_stock_and_status_and_preserve_retired_stocked_variants_as_inactive(): void

@@ -86,6 +86,7 @@ class ProductRequest extends FormRequest
             'variants.*.id' => ['nullable', 'integer', Rule::exists('product_variants', 'id')],
             'variants.*.client_key' => ['nullable', 'string', 'max:255'],
             'variants.*.sku' => ['required', 'string', 'max:255'],
+            'variants.*.barcode' => ['nullable', 'string', 'max:255'],
             'variants.*.price' => ['required', 'numeric', 'min:0'],
             'variants.*.compare_at_price' => ['nullable', 'numeric', 'min:0'],
             'variants.*.stock_quantity' => ['required', 'integer', 'min:0'],
@@ -106,11 +107,11 @@ class ProductRequest extends FormRequest
 
             'installment_plans' => ['nullable', 'array'],
             'installment_plans.*.id' => ['nullable', 'integer', Rule::exists('installment_plans', 'id')],
-            'installment_plans.*.scope' => ['required', Rule::in(['variant'])],
+            'installment_plans.*.scope' => ['required', Rule::in(['product', 'variant'])],
             'installment_plans.*.variant_key' => ['nullable', 'string', 'max:255'],
             'installment_plans.*.product_variant_id' => ['nullable', 'integer', Rule::exists('product_variants', 'id')],
             'installment_plans.*.months' => ['required', 'integer', Rule::in([3, 6, 9])],
-            'installment_plans.*.total_amount' => ['required', 'numeric', 'gt:0'],
+            'installment_plans.*.total_amount' => ['nullable', 'numeric', 'gt:0'],
             'installment_plans.*.interval_type' => ['nullable', Rule::in(app(InstallmentCalculatorService::class)->intervalTypes())],
             'installment_plans.*.is_active' => ['nullable', 'boolean'],
         ];
@@ -172,10 +173,26 @@ class ProductRequest extends FormRequest
 
         foreach (($payload['installment_plans'] ?? []) as $planIndex => $plan) {
             $payload['installment_plans'][$planIndex]['is_active'] = filter_var($plan['is_active'] ?? true, FILTER_VALIDATE_BOOL);
-            $payload['installment_plans'][$planIndex]['scope'] = 'variant';
+            $payload['installment_plans'][$planIndex]['scope'] = ($plan['scope'] ?? 'variant') === 'product' ? 'product' : 'variant';
             $payload['installment_plans'][$planIndex]['interval_type'] = InstallmentCalculatorService::INTERVAL_MONTHLY;
             $payload['installment_plans'][$planIndex]['down_payment'] = 0;
             $payload['installment_plans'][$planIndex]['financing_fee'] = 0;
+
+            // Backward compatibility for this project's original plan editor,
+            // which submitted terms and fees without an explicit total.
+            if (! filled($plan['total_amount'] ?? null)) {
+                $targetKey = (string) ($plan['variant_key'] ?? $plan['product_variant_id'] ?? '');
+                $target = collect($payload['variants'] ?? [])->first(function (array $variant) use ($targetKey): bool {
+                    return $targetKey !== '' && in_array($targetKey, [
+                        (string) ($variant['client_key'] ?? ''),
+                        (string) ($variant['id'] ?? ''),
+                    ], true);
+                });
+                $target ??= collect($payload['variants'] ?? [])->first();
+                if ($target && filled($target['price'] ?? null)) {
+                    $payload['installment_plans'][$planIndex]['total_amount'] = $target['price'];
+                }
+            }
         }
 
         foreach (($payload['variants'] ?? []) as $variantIndex => $variant) {
@@ -336,6 +353,7 @@ class ProductRequest extends FormRequest
             ->unique()
             ->values();
         $skus = [];
+        $barcodes = [];
         $signatures = [];
 
         foreach ($this->input('variants', []) as $variantIndex => $variant) {
@@ -347,6 +365,19 @@ class ProductRequest extends FormRequest
                 }
 
                 $skus[] = $sku;
+            }
+
+            $barcode = trim((string) ($variant['barcode'] ?? ''));
+            if ($barcode !== '') {
+                if (in_array($barcode, $barcodes, true)) {
+                    $validator->errors()->add("variants.{$variantIndex}.barcode", 'Variant barcodes must be unique.');
+                }
+                $barcodes[] = $barcode;
+
+                $existingBarcode = ProductVariant::query()->where('barcode', $barcode)->first();
+                if ($existingBarcode && (int) ($variant['id'] ?? 0) !== $existingBarcode->id) {
+                    $validator->errors()->add("variants.{$variantIndex}.barcode", 'This barcode is already assigned to another variant.');
+                }
             }
 
             $resolvedValues = $this->resolveSubmittedVariantValues($variant);
@@ -472,7 +503,12 @@ class ProductRequest extends FormRequest
             }
         }
 
-        $activeVariants = $submittedVariants->filter(fn (array $variant) => filter_var($variant['is_active'] ?? true, FILTER_VALIDATE_BOOL));
+        $requiresCompleteVariantPlans = ($this->input('status') === ProductStatus::Active->value)
+            && collect($this->input('installment_plans', []))->isNotEmpty()
+            && collect($this->input('installment_plans', []))->every(fn (array $plan) => ($plan['scope'] ?? 'variant') === 'variant');
+        $activeVariants = $requiresCompleteVariantPlans
+            ? $submittedVariants->filter(fn (array $variant) => filter_var($variant['is_active'] ?? true, FILTER_VALIDATE_BOOL))
+            : collect();
         foreach ($activeVariants as $variantKey => $variant) {
             foreach ([3, 6, 9] as $payments) {
                 $plan = collect($this->input('installment_plans', []))->first(function (array $entry) use ($payments, $variantKey, $variant): bool {

@@ -131,10 +131,12 @@ class ProductCatalogService
             foreach ($product->variants as $variant) {
                 $newVariant = $variant->replicate([
                     'sku',
+                    'barcode',
                     'option_signature',
                 ]);
                 $newVariant->product_id = $copy->id;
                 $newVariant->sku = $this->uniqueDuplicateSku($variant->sku);
+                $newVariant->barcode = null;
                 $newVariant->save();
 
                 $newOptionValueIds = $variant->optionValues
@@ -240,6 +242,7 @@ class ProductCatalogService
                     'id' => $variant['id'] ?? null,
                     'client_key' => (string) ($variant['client_key'] ?? $variant['id'] ?? 'variant-'.$index),
                     'sku' => trim((string) $variant['sku']),
+                    'barcode' => filled($variant['barcode'] ?? null) ? trim((string) $variant['barcode']) : null,
                     'price' => round((float) $variant['price'], 2),
                     'compare_at_price' => filled($variant['compare_at_price'] ?? null) ? round((float) $variant['compare_at_price'], 2) : null,
                     'stock_quantity' => (int) $variant['stock_quantity'],
@@ -469,6 +472,7 @@ class ProductCatalogService
             $variant->product()->associate($product);
             $variant->fill([
                 'sku' => $row['sku'],
+                'barcode' => $row['barcode'],
                 'price' => $row['price'],
                 'compare_at_price' => $row['compare_at_price'],
                 'stock_quantity' => $row['stock_quantity'],
@@ -535,7 +539,9 @@ class ProductCatalogService
                 : $optionValues->first(fn (ProductOptionValue $value) => $value->productOption?->slug === ProductOption::COLOR_SLUG
                     && Str::lower($value->name) === Str::lower($gallery['option_value_name'] ?? ''));
 
-            if (! $color || $color->productOption?->slug !== ProductOption::COLOR_SLUG) continue;
+            if (! $color || $color->productOption?->slug !== ProductOption::COLOR_SLUG) {
+                continue;
+            }
 
             $existing = $product->images()->where('product_option_value_id', $color->id)->get()->keyBy('id');
             $keptIds = [];
@@ -553,7 +559,9 @@ class ProductCatalogService
                     'is_primary' => (bool) ($row['is_primary'] ?? false),
                 ]);
                 $image->save();
-                if ($previousPath !== $image->image_path) $this->deletePublicPathIfUnused($previousPath, ProductImage::class, 'image_path', $image->id);
+                if ($previousPath !== $image->image_path) {
+                    $this->deletePublicPathIfUnused($previousPath, ProductImage::class, 'image_path', $image->id);
+                }
                 $keptIds[] = $image->id;
             }
 
