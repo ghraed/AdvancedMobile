@@ -79,6 +79,11 @@ class User extends Authenticatable
         return $this->hasMany(InstallmentApplication::class);
     }
 
+    public function installmentAccounts(): HasMany
+    {
+        return $this->hasMany(InstallmentAccount::class);
+    }
+
     public function posSales(): HasMany
     {
         return $this->hasMany(Order::class, 'cashier_id');

@@ -87,6 +87,35 @@ class InstallmentCalculatorService
         ];
     }
 
+    /**
+     * Split an immutable cent total without introducing floating-point values.
+     * Any indivisible remainder belongs to the final payment.
+     *
+     * Down payment is intentionally absent: stored down_payment values do not
+     * reduce the financed total under the application's existing business rule.
+     *
+     * @return list<int>
+     */
+    public function installmentAmountsInCents(int $totalAmountCents, int $numberOfPayments): array
+    {
+        if ($totalAmountCents < 1) {
+            throw new DomainException('Installment total must be positive.');
+        }
+        if ($numberOfPayments < 2) {
+            throw new DomainException('Installment payments must be at least 2.');
+        }
+
+        $regular = intdiv($totalAmountCents, $numberOfPayments);
+        if ($regular < 1) {
+            throw new DomainException('Installment total is too small for the payment count.');
+        }
+
+        $amounts = array_fill(0, $numberOfPayments, $regular);
+        $amounts[$numberOfPayments - 1] = $totalAmountCents - ($regular * ($numberOfPayments - 1));
+
+        return $amounts;
+    }
+
     protected function dueDateFor(CarbonImmutable $startingAt, string $intervalType, int $sequence): CarbonImmutable
     {
         return match ($intervalType) {

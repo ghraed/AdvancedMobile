@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\InstallmentApplication;
 use App\Models\InstallmentApplicationDocument;
+use App\Services\InstallmentAccountService;
+use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -34,9 +36,22 @@ class InstallmentApplicationController extends Controller
 
     public function show(InstallmentApplication $installmentApplication)
     {
-        $installmentApplication->load(['documents', 'statusHistory.performer', 'reviewer']);
+        $installmentApplication->load(['documents', 'statusHistory.performer', 'reviewer', 'installmentAccount']);
 
         return view('admin.installment-applications.show', ['application' => $installmentApplication]);
+    }
+
+    public function activate(Request $request, InstallmentApplication $installmentApplication, InstallmentAccountService $service)
+    {
+        $data = $request->validate(['first_due_date' => ['required', 'date']]);
+
+        try {
+            $account = $service->activate($installmentApplication, $data['first_due_date'], $request->user());
+        } catch (DomainException $exception) {
+            return back()->withErrors(['first_due_date' => $exception->getMessage()])->withInput();
+        }
+
+        return redirect()->route('admin.installments.show', $account)->with('status', 'Installment account activated.');
     }
 
     public function transition(Request $request, InstallmentApplication $installmentApplication)

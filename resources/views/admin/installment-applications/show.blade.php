@@ -69,6 +69,20 @@
         <section class="admin-card">
             <h3 class="admin-card__title">Status: {{ $application->status }}</h3>
 
+            @if ($application->status === 'approved' && ! $application->installmentAccount)
+                @if ($application->user_id)
+                    <form method="POST" action="{{ route('admin.installment-applications.activate', $application) }}" class="admin-form-grid" style="margin-bottom:24px">
+                        @csrf
+                        <label class="admin-field"><span class="admin-label">First payment due date</span><input class="admin-input" type="date" name="first_due_date" value="{{ old('first_due_date', today()->toDateString()) }}" required></label>
+                        <button class="admin-button" type="submit">Start installment agreement</button>
+                    </form>
+                @else
+                    <p class="admin-alert admin-alert--error">Assign this guest application to a customer before starting an account.</p>
+                @endif
+            @elseif ($application->installmentAccount)
+                <p><a class="admin-link-button" href="{{ route('admin.installments.show', $application->installmentAccount) }}">View installment account {{ $application->installmentAccount->account_number }}</a></p>
+            @endif
+
             <form method="POST" action="{{ route('admin.installment-applications.transition', $application) }}" class="admin-form-grid">
                 @csrf
                 @method('PATCH')

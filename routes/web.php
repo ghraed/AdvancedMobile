@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\InstallmentAccountController as AdminInstallmentAccountController;
 use App\Http\Controllers\Admin\InstallmentApplicationController as AdminInstallmentApplicationController;
 use App\Http\Controllers\Admin\InstallmentPlanController;
 use App\Http\Controllers\Admin\PosController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Admin\ProfitAnalyticsController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\EliteMobileMarketplaceController;
+use App\Http\Controllers\InstallmentAccountController;
 use App\Http\Controllers\InstallmentApplicationController;
 use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +50,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/my-installment-applications', [InstallmentApplicationController::class, 'index'])->name('installments.index');
     Route::get('/my-installment-applications/{application}', [InstallmentApplicationController::class, 'show'])->name('installments.show');
     Route::get('/my-installment-applications/{application}/documents/{document}', [InstallmentApplicationController::class, 'document'])->name('installments.documents.show');
+    Route::prefix('account')->name('account.')->group(function () {
+        Route::get('/installment-applications', [InstallmentApplicationController::class, 'index'])->name('installment-applications.index');
+        Route::get('/installment-applications/{application}', [InstallmentApplicationController::class, 'show'])->name('installment-applications.show');
+        Route::get('/installment-applications/{application}/documents/{document}', [InstallmentApplicationController::class, 'document'])->name('installment-applications.documents.show');
+        Route::get('/installments', [InstallmentAccountController::class, 'index'])->name('installments.index');
+        Route::get('/installments/{account}', [InstallmentAccountController::class, 'show'])->name('installments.show');
+        Route::get('/installments/{account}/payments/{payment}/receipt', [InstallmentAccountController::class, 'receipt'])->name('installments.payments.receipt');
+    });
 });
 Route::get('/mobiles-accessories', [EliteMobileMarketplaceController::class, 'mobilesAccessories']);
 
@@ -86,8 +96,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/installment-applications', [AdminInstallmentApplicationController::class, 'index'])->name('installment-applications.index');
         Route::get('/installment-applications/{installmentApplication}', [AdminInstallmentApplicationController::class, 'show'])->name('installment-applications.show');
         Route::patch('/installment-applications/{installmentApplication}/status', [AdminInstallmentApplicationController::class, 'transition'])->name('installment-applications.transition');
+        Route::post('/installment-applications/{installmentApplication}/activate', [AdminInstallmentApplicationController::class, 'activate'])->name('installment-applications.activate');
         Route::get('/installment-applications/{installmentApplication}/documents/{document}/preview', [AdminInstallmentApplicationController::class, 'previewDocument'])->name('installment-applications.documents.preview');
         Route::get('/installment-applications/{installmentApplication}/documents/{document}', [AdminInstallmentApplicationController::class, 'document'])->name('installment-applications.documents.show');
+        Route::get('/installments', [AdminInstallmentAccountController::class, 'index'])->name('installments.index');
+        Route::get('/installments/{installment}', [AdminInstallmentAccountController::class, 'show'])->name('installments.show');
+        Route::post('/installments/{installment}/payments', [AdminInstallmentAccountController::class, 'payment'])->name('installments.payments.store');
+        Route::post('/installments/{installment}/payments/{payment}/reverse', [AdminInstallmentAccountController::class, 'reverse'])->name('installments.payments.reverse');
+        Route::get('/installments/{installment}/payments/{payment}/receipt', [AdminInstallmentAccountController::class, 'receipt'])->name('installments.payments.receipt');
+        Route::post('/installments/{installment}/notes', [AdminInstallmentAccountController::class, 'note'])->name('installments.notes.store');
+        Route::post('/installments/{installment}/cancel', [AdminInstallmentAccountController::class, 'cancel'])->name('installments.cancel');
         Route::post('/categories/reorder', [CategoryController::class, 'reorder'])->name('categories.reorder');
         Route::patch('/categories/{category}/activate', [CategoryController::class, 'activate'])->name('categories.activate');
         Route::patch('/categories/{category}/deactivate', [CategoryController::class, 'deactivate'])->name('categories.deactivate');

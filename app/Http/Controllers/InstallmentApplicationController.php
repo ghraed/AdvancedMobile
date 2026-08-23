@@ -7,8 +7,8 @@ use App\Models\InstallmentApplication;
 use App\Models\Product;
 use App\Models\ProductOption;
 use App\Models\ProductVariant;
-use App\Services\InstallmentApplicationCalculator;
 use App\Services\CategoryMenuService;
+use App\Services\InstallmentApplicationCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -89,7 +89,7 @@ class InstallmentApplicationController extends Controller
 
     public function index()
     {
-        $applications = auth()->user()->installmentApplications()->latest()->paginate(12);
+        $applications = auth()->user()->installmentApplications()->with('installmentAccount')->latest()->paginate(12);
 
         return view('installments.index', compact('applications'));
     }
@@ -97,6 +97,8 @@ class InstallmentApplicationController extends Controller
     public function show(InstallmentApplication $application)
     {
         $this->authorize('view', $application);
+
+        $application->load(['statusHistory.performer', 'installmentAccount']);
 
         return view('installments.show', compact('application'));
     }
@@ -118,7 +120,7 @@ class InstallmentApplicationController extends Controller
     {
         do {
             $number = 'INS-'.now()->format('Ymd').'-'.str_pad((string) (InstallmentApplication::whereDate('created_at', today())->lockForUpdate()->count() + 1), 6, '0', STR_PAD_LEFT);
-        } while (InstallmentApplication::where('application_number',$number)->exists());
+        } while (InstallmentApplication::where('application_number', $number)->exists());
 
         return $number;
     }
