@@ -72,7 +72,7 @@
             <x-admin.empty-state title="No finalized sales" message="No paid or refunded sales match the selected period and filters." />
         @else
             <div class="analytics-chart-wrap"><canvas id="profit-trend-chart" height="310" aria-label="Profit trend chart"></canvas></div>
-            <div class="chart-legend"><span><i style="--legend:#2563eb"></i>Net sales</span><span><i style="--legend:#059669"></i>Gross profit</span><span><i style="--legend:#f59e0b"></i>COGS</span></div>
+            <div class="chart-legend"><span><i style="--legend:#687f68"></i>Net sales</span><span><i style="--legend:#607b64"></i>Gross profit</span><span><i style="--legend:#a68855"></i>COGS</span></div>
         @endif
     </div>
 
@@ -125,12 +125,12 @@
     const canvas = document.getElementById('profit-trend-chart'); if (!canvas) return;
     const rows = @json($trend['rows']); const ratio = window.devicePixelRatio || 1; const rect = canvas.getBoundingClientRect(); canvas.width = rect.width * ratio; canvas.height = 310 * ratio;
     const ctx = canvas.getContext('2d'); ctx.scale(ratio, ratio); const width = rect.width; const height = 310; const pad = {l:58,r:18,t:18,b:46};
-    const series = [{key:'net_sales_cents',color:'#2563eb'},{key:'gross_profit_cents',color:'#059669'},{key:'cogs_cents',color:'#f59e0b'}]; const values = rows.flatMap(row => series.map(item => Number(row[item.key]))); const max = Math.max(1,...values); const min = Math.min(0,...values); const span = max-min || 1;
-    ctx.font='12px Inter'; ctx.fillStyle='#64748b'; ctx.strokeStyle='#e2e8f0'; ctx.lineWidth=1;
+    const series = [{key:'net_sales_cents',color:'#687f68'},{key:'gross_profit_cents',color:'#607b64'},{key:'cogs_cents',color:'#a68855'}]; const values = rows.flatMap(row => series.map(item => Number(row[item.key]))); const max = Math.max(1,...values); const min = Math.min(0,...values); const span = max-min || 1;
+    ctx.font='12px Inter'; ctx.fillStyle='#746f64'; ctx.strokeStyle='#d8cebc'; ctx.lineWidth=1;
     for(let i=0;i<=4;i++){const y=pad.t+(height-pad.t-pad.b)*(i/4);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.stroke();const value=max-span*(i/4);ctx.fillText('$'+(value/100).toLocaleString(undefined,{maximumFractionDigits:0}),4,y+4)}
     const x = i => pad.l+(rows.length===1?(width-pad.l-pad.r)/2:(width-pad.l-pad.r)*(i/(rows.length-1))); const y = value => pad.t+(height-pad.t-pad.b)*((max-value)/span);
     series.forEach(item=>{ctx.strokeStyle=item.color;ctx.lineWidth=2.5;ctx.beginPath();rows.forEach((row,i)=>{const px=x(i),py=y(Number(row[item.key]));i?ctx.lineTo(px,py):ctx.moveTo(px,py)});ctx.stroke()});
-    const labelIndexes=[0,Math.floor((rows.length-1)/2),rows.length-1].filter((v,i,a)=>a.indexOf(v)===i); labelIndexes.forEach(i=>{const label=String(rows[i].bucket);ctx.fillStyle='#64748b';ctx.textAlign=i===0?'left':(i===rows.length-1?'right':'center');ctx.fillText(label,x(i),height-16)});
+    const labelIndexes=[0,Math.floor((rows.length-1)/2),rows.length-1].filter((v,i,a)=>a.indexOf(v)===i); labelIndexes.forEach(i=>{const label=String(rows[i].bucket);ctx.fillStyle='#746f64';ctx.textAlign=i===0?'left':(i===rows.length-1?'right':'center');ctx.fillText(label,x(i),height-16)});
 })();
 </script>
 @endpush

@@ -34,7 +34,7 @@
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
                         <div>
                             <strong>{{ str($document->type)->replace('_', ' ')->headline() }}</strong>
-                            <div style="font-size:12px; color:#64748b;">{{ $document->original_filename }}</div>
+                            <div style="font-size:12px; color:var(--admin-muted);">{{ $document->original_filename }}</div>
                         </div>
                         <a class="admin-link-button" href="{{ route('admin.installment-applications.documents.show', [$application, $document]) }}">Download</a>
                     </div>
@@ -48,17 +48,17 @@
                             <img
                                 src="{{ route('admin.installment-applications.documents.preview', [$application, $document]) }}"
                                 alt="{{ $document->type }}"
-                                style="display:block; width:auto; max-width:16rem; max-height:12rem; border-radius:16px; border:1px solid #e2e8f0; background:#f8fafc; object-fit:cover;"
+                                style="display:block; width:auto; max-width:16rem; max-height:12rem; border-radius:16px; border:1px solid var(--admin-border); background:var(--admin-surface-muted); object-fit:cover;"
                             >
                         </button>
                     @elseif ($isPdf)
                         <iframe
                             src="{{ route('admin.installment-applications.documents.preview', [$application, $document]) }}"
                             title="{{ $document->type }}"
-                            style="width:100%; height:32rem; border:1px solid #e2e8f0; border-radius:16px; background:#fff;"
+                        style="width:100%; height:32rem; border:1px solid var(--admin-border); border-radius:16px; background:var(--admin-surface);"
                         ></iframe>
                     @else
-                        <p style="margin:0; color:#64748b;">Preview is not available for this file type. Use Download.</p>
+                        <p style="margin:0; color:var(--admin-muted);">Preview is not available for this file type. Use Download.</p>
                     @endif
                 </article>
             @empty
@@ -127,7 +127,7 @@
                     <img
                         src="{{ route('admin.installment-applications.documents.preview', [$application, $document]) }}"
                         alt="{{ $document->type }}"
-                        style="display:block; width:100%; max-height:80vh; object-fit:contain; border-radius:18px; border:1px solid #e2e8f0; background:#f8fafc;"
+                        style="display:block; width:100%; max-height:80vh; object-fit:contain; border-radius:18px; border:1px solid var(--admin-border); background:var(--admin-surface-muted);"
                     >
                 </div>
             </div>

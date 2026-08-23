@@ -357,8 +357,8 @@
         .plan-preview-row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,0.85); border: 1px solid var(--admin-border); }
         .admin-modal[hidden] { display: none; }
         .admin-modal { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 24px; }
-        .admin-modal__backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.56); }
-        .admin-modal__panel { position: relative; width: min(720px, 100%); max-height: calc(100vh - 48px); overflow: auto; border-radius: 24px; padding: 24px; background: var(--admin-surface); box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28); }
+        .admin-modal__backdrop { position: absolute; inset: 0; background: rgba(38, 49, 40, 0.56); }
+        .admin-modal__panel { position: relative; width: min(720px, 100%); max-height: calc(100vh - 48px); overflow: auto; border-radius: 24px; padding: 24px; background: var(--admin-surface); box-shadow: 0 30px 80px rgba(31, 29, 24, 0.28); }
         .variant-table-wrap { width: 100%; }
         .variant-table { width: 100%; border-collapse: collapse; font-size: 14px; }
         .variant-table th, .variant-table td { padding: 10px 8px; border-bottom: 1px solid var(--admin-border); text-align: left; vertical-align: top; }
@@ -370,8 +370,8 @@
         .variant-table .variant-sync-select { width: 16px; height: 16px; accent-color: var(--admin-primary); cursor: pointer; }
         .admin-toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
         .admin-toggle__input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-        .admin-toggle__track { display: inline-flex; align-items: center; width: 42px; height: 24px; padding: 3px; border-radius: 999px; background: #94a3b8; box-shadow: inset 0 1px 2px rgba(15,23,42,.22); transition: background .18s ease, box-shadow .18s ease; }
-        .admin-toggle__thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(15,23,42,.26); transition: transform .18s ease; }
+        .admin-toggle__track { display: inline-flex; align-items: center; width: 42px; height: 24px; padding: 3px; border-radius: 999px; background: #c4b89f; box-shadow: inset 0 1px 2px rgba(31,29,24,.22); transition: background .18s ease, box-shadow .18s ease; }
+        .admin-toggle__thumb { width: 18px; height: 18px; border-radius: 50%; background: #fffaf0; box-shadow: 0 2px 5px rgba(31,29,24,.26); transition: transform .18s ease; }
         .admin-toggle__input:checked + .admin-toggle__track { background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-soft)); }
         .admin-toggle__input:checked + .admin-toggle__track .admin-toggle__thumb { transform: translateX(18px); }
         .admin-toggle__input:focus-visible + .admin-toggle__track { outline: 3px solid rgba(37,99,235,.32); outline-offset: 3px; }

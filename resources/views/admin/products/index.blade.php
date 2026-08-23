@@ -147,28 +147,32 @@
                                 </div>
                             </td>
                             <td>
-                                <div class="admin-actions" style="justify-content:flex-end;">
-                                    <a href="{{ $isPublic ? route('products.show', $product) : route('admin.products.preview', $product) }}" target="_blank" rel="noreferrer" class="admin-link-button">View</a>
-                                    <a href="{{ route('admin.products.edit', $product) }}" class="admin-link-button">Edit</a>
-                                    <form method="POST" action="{{ route('admin.products.duplicate', $product) }}" data-loading-form>
-                                        @csrf
-                                        <button type="submit" class="admin-link-button" data-loading-label="Duplicating...">Duplicate</button>
-                                    </form>
-                                    @if ($product->status === \App\Enums\ProductStatus::Active)
-                                        <form method="POST" action="{{ route('admin.products.deactivate', $product) }}" data-loading-form>
+                                <details class="admin-action-menu">
+                                    <summary class="admin-action-menu__trigger" aria-label="Actions for {{ $product->name }}" title="Product actions"><span class="material-symbols-outlined">more_vert</span><span class="sr-only">Product actions</span></summary>
+                                    <div class="admin-action-menu__panel">
+                                        <a href="{{ $isPublic ? route('products.show', $product) : route('admin.products.preview', $product) }}" target="_blank" rel="noreferrer" class="admin-action-menu__item"><span class="material-symbols-outlined">open_in_new</span>View</a>
+                                        <a href="{{ route('admin.products.edit', $product) }}" class="admin-action-menu__item"><span class="material-symbols-outlined">edit</span>Edit</a>
+                                        <form method="POST" action="{{ route('admin.products.duplicate', $product) }}" data-loading-form>
                                             @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="admin-link-button" data-loading-label="Deactivating...">Deactivate</button>
+                                            <button type="submit" class="admin-action-menu__item" data-loading-label="Duplicating..."><span class="material-symbols-outlined">content_copy</span>Duplicate</button>
                                         </form>
-                                    @else
-                                        <form method="POST" action="{{ route('admin.products.activate', $product) }}" data-loading-form>
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="admin-link-button" data-loading-label="Activating...">Activate</button>
-                                        </form>
-                                    @endif
-                                    <button type="button" class="admin-button admin-button--danger" data-confirm-trigger="delete-product-{{ $product->id }}">Delete</button>
-                                </div>
+                                        <div class="admin-action-menu__divider"></div>
+                                        @if ($product->status === \App\Enums\ProductStatus::Active)
+                                            <form method="POST" action="{{ route('admin.products.deactivate', $product) }}" data-loading-form>
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="admin-action-menu__item" data-loading-label="Deactivating..."><span class="material-symbols-outlined">visibility_off</span>Deactivate</button>
+                                            </form>
+                                        @else
+                                            <form method="POST" action="{{ route('admin.products.activate', $product) }}" data-loading-form>
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="admin-action-menu__item" data-loading-label="Activating..."><span class="material-symbols-outlined">visibility</span>Activate</button>
+                                            </form>
+                                        @endif
+                                        <button type="button" class="admin-action-menu__item admin-action-menu__item--danger" data-confirm-trigger="delete-product-{{ $product->id }}"><span class="material-symbols-outlined">delete</span>Delete</button>
+                                    </div>
+                                </details>
                                 <x-admin.modal-dialog id="delete-product-{{ $product->id }}" title="Delete product?" message="Products with remaining stock cannot be deleted. Set stock to zero or retire stocked variants before trying again.">
                                     <form method="POST" action="{{ route('admin.products.destroy', $product) }}" data-loading-form>
                                         @csrf
